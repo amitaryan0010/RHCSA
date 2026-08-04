@@ -20,7 +20,7 @@ $ - variable identifier, reference to variable (echo $SHELL)
     I am /bin/bash
 
 3) Backslash (\) - Protectss a single character
-    # echo I am \#SHELL
+    # echo I am \$SHELL
     I am $SHELL
 
 ** Back tick (`)
