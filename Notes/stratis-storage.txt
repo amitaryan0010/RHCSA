@@ -1,0 +1,177 @@
+Stratis 
+    is a local storage management solution developed primarily by Red Hat. It is not a new file system from scratch; instead, it is a volume-managing filesystem (VMF) daemon that runs in user space. It integrates existing, battle-tested Linux technologies—specifically the XFS file system, LVM (Logical Volume Manager), and the device-mapper subsystem—into a single, unified interface.
+    The primary purpose of Stratis is to bring advanced, enterprise-grade storage features to users with a fraction of the configuration complexity.
+
+_______________________________________________________________________________________________________________________________________________
+Core Concepts of Stratis
+    Storage Pools: Stratis abstracts individual block devices (like SSDs, NVMe drives, or partitions) into a shared pool of storage.
+    Flexible File Systems: Instead of formatting a rigid partition, you create file systems directly from the storage pool. They dynamically expand and consume space from the pool only as data is added.
+
+            Statis Layers
+-------------------------------------------
+User View               Internal View
+-------------------------------------------
+Filesystem              Filesystem
+                        XFS 
+                        dm-thin
+Pool                    dm-thinpool
+                        dm-cache
+                        dm-raid
+                        dm-integrity
+Blockdev                Blockdev
+_______________________________________________________________________________________________________________________________________________
+Key Features
+    Thin Provisioning: Allocates storage virtually, meaning file systems only consume actual physical disk space when files are written, rather than reserving large blocks up front.Snapshots: Creates quick, point-in-time copies of file systems that share data blocks, making them highly efficient for backups and testing.
+    Data Integrity & Security: Supports built-in pool encryption through LUKS, integrating seamlessly with TPM2 and Network-Bound Disk Encryption (NBDE).
+    Simplicity: Consolidates multiple layers of management (partitioning, volume layout, formatting) into simple, high-level CLI commands.
+
+
+Architecture
+    Stratis operates via a client-server setup:
+        stratisd: A background service (daemon) written in Rust that manages the hardware components and exposes a D-Bus API.
+        stratis-cli: A command-line utility written in Python that communicates with the daemon to let users execute storage tasks
+
+_______________________________________________________________________________________________________________________________________________
+
+Install the require package:
+    [root@rhel-9 ~]# dnf install stratis-cli stratisd
+
+enable and start the service:
+    [root@rhel-9 ~]# systemctl enable --now stratisd
+
+ Add two or more disks to play with:
+    [root@rhel-9 ~]# lsblk
+    NAME                MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+    sdc                   8:32   0    2G  0 disk
+    sdd                   8:48   0    2G  0 disk
+
+create a pool with one disk first and list it:
+    [root@rhel-9 ~]# stratis pool create cloud1 /dev/sdc
+    (Stratis automatically initialized the disk, formatted it using XFS, and placed it under its management layers. You did not have to manually run fdisk, pvcreate, or vgcreate)
+
+    [root@rhel-9 ~]# stratis pool list
+    Name            Total / Used / Free    Properties                                   UUID   Alerts
+    cloud1   2 GiB / 524 MiB / 1.49 GiB   ~Ca,~Cr, Op   253afdb3-021c-419b-ab90-2f82cf62b8ce   WS001
+    (~Ca — Caching is Not Active: What it means: The Ca flag stands for Cache. Because it has a ~ in front of it, your pool does not have a dedicated caching tier attached.)
+    (~Cr — Encryption is Not Active: What it means: The Cr flag stands for Crypto (Encryption). The ~ means your pool data is completely unencrypted.)
+    (Op means the pool is Operational. The alert WS001 is a standard warning indicating the pool is small or lacks redundancy, which is expected for a 2 GiB single-disk setup.)
+
+Extend the pool with another disk:
+    [root@rhel-9 ~]# stratis pool add-data cloud1 /dev/sdd
+
+    [root@rhel-9 ~]# stratis pool list
+    Name            Total / Used / Free    Properties                                   UUID   Alerts
+    cloud1   4 GiB / 530 MiB / 3.48 GiB   ~Ca,~Cr, Op   253afdb3-021c-419b-ab90-2f82cf62b8ce
+
+View Block Devices in a Pool
+    [root@rhel-9 ~]# stratis blockdev list
+    Pool Name   Device Node   Physical Size   Tier   UUID
+    cloud1      /dev/sdc              2 GiB   DATA   1acf05fa-f0ba-456b-b532-31f766875435
+    cloud1      /dev/sdd              2 GiB   DATA   f1d581ec-8df8-4628-9f62-301592045368
+
+View Pool Details
+    [root@rhel-9 ~]# stratis pool list --name cloud1
+    UUID: 253afdb3-021c-419b-ab90-2f82cf62b8ce
+    Name: cloud1
+    Alerts: 1
+        WS001: All devices fully allocated
+    Actions Allowed: fully_operational
+    Cache: No
+    Filesystem Limit: 100
+    Allows Overprovisioning: Yes
+    Key Description: unencrypted
+    Clevis Configuration: unencrypted
+    Space Usage:
+    Fully Allocated: Yes
+        Size: 4 GiB
+        Allocated: 4 GiB
+        Used: 4 GiB
+
+Creating the filesystem from this pool
+    [root@rhel-9 ~]# stratis filesystem create cloud1 cloudfs1
+
+    [root@rhel-9 ~]# stratis filesystem list
+    Pool     Filesystem   Total / Used / Free / Limit            Device                         UUID
+    cloud1   cloudfs1     1 TiB / 546 MiB / 1023.47 GiB / None   /dev/stratis/cloud1/cloudfs1   1f6527d7-8e60-4155-9af7-3706c065c4e5
+    (Note that each filesystem reports a virtual size of 1 TiB. This is the thin provisioning feature - the filesystem only consumes actual pool space as data is written.)
+
+Creating the snapshot from same filesystem
+    [root@rhel-9 ~]# stratis filesystem snapshot cloud1 cloudfs1 cloudss1
+
+    [root@rhel-9 ~]# stratis filesystem list
+    Pool     Filesystem   Total / Used / Free / Limit            Device                         UUID
+    cloud1   cloudfs1     1 TiB / 546 MiB / 1023.47 GiB / None   /dev/stratis/cloud1/cloudfs1   1f6527d7-8e60-4155-9af7-3706c065c4e5
+    cloud1   cloudss1     1 TiB / 546 MiB / 1023.47 GiB / None   /dev/stratis/cloud1/cloudss1   bae9d9c7-51ca-4cbb-813b-f82b03d3db18
+
+    [root@rhel-9 ~]# lsblk | grep -C1 -i stratis
+    sdc                                                                                           8:32   0    2G  0 disk
+    └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-physical-originsub                     253:1    0    4G  0 stratis
+    ├─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-flex-thinmeta                        253:2    0    5M  0 stratis
+    │ └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-thinpool-pool                      253:5    0  3.5G  0 stratis
+    │   └─stratis-1-253afdb3021c419bab902f82cf62b8ce-thin-fs-1f6527d78e6041559af73706c065c4e5 253:6    0    1T  0 stratis /stratis1
+    ├─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-flex-thindata                        253:3    0  3.5G  0 stratis
+    │ └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-thinpool-pool                      253:5    0  3.5G  0 stratis
+    │   └─stratis-1-253afdb3021c419bab902f82cf62b8ce-thin-fs-1f6527d78e6041559af73706c065c4e5 253:6    0    1T  0 stratis /stratis1
+    └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-flex-mdv                             253:4    0  512M  0 stratis
+    sdd                                                                                           8:48   0    2G  0 disk
+    └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-physical-originsub                     253:1    0    4G  0 stratis
+    ├─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-flex-thinmeta                        253:2    0    5M  0 stratis
+    │ └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-thinpool-pool                      253:5    0  3.5G  0 stratis
+    │   └─stratis-1-253afdb3021c419bab902f82cf62b8ce-thin-fs-1f6527d78e6041559af73706c065c4e5 253:6    0    1T  0 stratis /stratis1
+    ├─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-flex-thindata                        253:3    0  3.5G  0 stratis
+    │ └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-thinpool-pool                      253:5    0  3.5G  0 stratis
+    │   └─stratis-1-253afdb3021c419bab902f82cf62b8ce-thin-fs-1f6527d78e6041559af73706c065c4e5 253:6    0    1T  0 stratis /stratis1
+    └─stratis-1-private-253afdb3021c419bab902f82cf62b8ce-flex-mdv                             253:4    0  512M  0 stratis
+
+
+Destory the filesystem  
+    [root@rhel-9 ~]# stratis filesystem destroy cloud1 cloudss1
+    [root@rhel-9 ~]# stratis filesystem list
+    Pool     Filesystem   Total / Used / Free / Limit            Device                         UUID
+    cloud1   cloudfs1     1 TiB / 546 MiB / 1023.47 GiB / None   /dev/stratis/cloud1/cloudfs1   1f6527d7-8e60-4155-9af7-3706c065c4e5
+
+List the Block UUID and mount it and make it permanent:
+    [root@rhel-9 ~]# lsblk --output=UUID /dev/stratis/cloud1/cloudfs1
+    UUID
+    1f6527d7-8e60-4155-9af7-3706c065c4e5
+
+    [root@rhel-9 ~]# echo "UUID=1f6527d7-8e60-4155-9af7-3706c065c4e5 /stratis1 xfs defaults,x-systemd.requires=stratisd.service 0 0" >> /etc/fstab
+    (use x-systemd.requires=stratisd.service. Because Stratis runs as a user-space service (stratisd), standard Linux mounting happens too early during boot before Stratis can assemble the pool. This flag forces systemd to wait for stratisd to be fully running before it attempts to mount /stratis1, preventing your system from hanging or booting into emergency mode.)
+
+    [root@rhel-9 ~]# mkdir /stratis1
+
+    [root@rhel-9 ~]# systemctl daemon-reload
+    [root@rhel-9 ~]# mount -a
+
+    [root@rhel-9 ~]# df -h /stratis1/
+    Filesystem                                                                                          Size  Used Avail Use% Mounted on/dev/mapper/stratis-1-253afdb3021c419bab902f82cf62b8ce-thin-fs-1f6527d78e6041559af73706c065c4e5                 1.0T  7.2G 1017G   1% /stratis1
+
+    [root@rhel-9 ~]# stratis filesystem list
+    Pool     Filesystem   Total / Used / Free / Limit            Device                         UUID
+    cloud1   cloudfs1     1 TiB / 546 MiB / 1023.47 GiB / None   /dev/stratis/cloud1/cloudfs1   1f6527d7-8e60-4155-9af7-3706c065c4e5
+
+    [root@rhel-9 ~]# dd if=/dev/urandom of=/stratis1/file1 bs=1M count=1024
+    1024+0 records in
+    1024+0 records out
+    1073741824 bytes (1.1 GB, 1.0 GiB) copied, 9.85286 s, 109 MB/s
+  
+    [root@rhel-9 ~]# stratis filesystem list
+    Pool     Filesystem   Total / Used / Free / Limit             Device                         UUID
+    cloud1   cloudfs1     1 TiB / 1.44 GiB / 1022.56 GiB / None   /dev/stratis/cloud1/cloudfs1   1f6527d7-8e60-4155-9af7-3706c065c4e5
+
+_______________________________________________________________________________________________________________________________________________
+Understanding Thin Provisioning
+    Each Stratis filesystem reports a virtual size of 1 TiB, but the actual storage consumption depends on how much data is written. The pool's total physical capacity limits the actual storage available.
+
+    Example:
+        Pool size: 50 GiB
+        4 filesystems created (each shows 1 TiB)
+        Total data written across all filesystems: 30 GiB
+        Pool used space: approximately 30 GiB
+    
+    Important: Monitor pool usage to avoid running out of physical space. If the pool fills completely, Stratis cannot assign more space to filesystems, writes can fail, and applications can lose data.
+
+Setting Filesystem Size Limits
+    While Stratis filesystems are thin-provisioned, you can set a size limit:
+        # sudo stratis filesystem create --size 10GiB --size-limit 10GiB datapool limited_fs
+        (This sets the filesystem size and size limit to 10 GiB.)

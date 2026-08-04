@@ -1,0 +1,110 @@
+✅  The Linux file system follows the Filesystem Hierarchy Standard (FHS), a single-root tree structure where everything starts from the root directory, represented by a forward slash (/). Unlike Windows, there are no drive letters like C:; instead, hardware and network drives are "mounted" as directories within this unified tree.
+
+👉 root file system tree structure
+[path4cloud@rhel-9 ~]$ tree -FL 1 /
+/
+├── afs/
+├── bin -> usr/bin/
+├── boot/
+├── dev/
+├── efi/
+├── etc/
+├── home/
+├── lib -> usr/lib/
+├── lib64 -> usr/lib64/
+├── media/
+├── mnt/
+├── opt/
+├── proc/
+├── root/
+├── run/
+├── sbin -> usr/sbin/
+├── srv/
+├── sys/
+├── tmp/
+├── usr/
+└── var/
+
+👉 Primary Top-Level Directories
+/boot:  Contains files necessary for the boot process, including the kernel and GRUB configuration.
+
+/dev: Contains device files representing hardware like disks (/dev/sda) or terminals.
+
+/proc: A virtual filesystem that exposes real-time information about running processes and the kernel.
+
+/sys: A newer virtual filesystem providing a structured interface to kernel device and driver information. (System related information)
+
+/lib & /lib64: Shared libraries required for the binaries in /bin and /sbin
+
+/media & /mnt: Locations for mounting removable media (USBs, CDs) or temporarily mounting other filesystems manually.
+
+/opt: Reserved for add-on application packages (like third-party software) that are not part of the standard OS.
+
+/bin & /usr/bin: Essential user command binaries (e.g., ls, cp, grep). In modern RHEL systems, /bin is often a symbolic link to /usr/bin.
+
+/sbin & /usr/sbin: System administration binaries (e.g., fdisk, reboot, iptables) intended for the root user.
+
+/etc: The central hub for system-wide configuration files.
+
+/home: Personal directories for each non-root user (e.g., /home/username).
+
+/root: The private home directory for the administrative superuser (root).
+
+/var: Variable data that changes frequently, such as logs (/var/log), mail, and spool files.
+
+/tmp: Storage for temporary files created by applications, often cleared upon reboot.
+
+/var/tmp (Persistent Temporary Files): Stores temporary files that need to survive a system reboot. Life Cycle: Unlike /tmp (which is often cleared every boot or every 10 days), /var/tmp is intended for long-term temporary data. Most RHEL-based systems are configured to clear files here only if they haven't been accessed for 30 days.
+
+/run (Runtime Volatile Data): A modern, temporary filesystem (tmpfs) that stores operational data about the system since it started. Life Cycle: It is entirely stored in RAM. Everything in /run is wiped the instant the power goes out or the system reboots. Use Case: Process IDs (.pid files), system sockets, and lock files. It tells the OS "what is currently running."
+
+
+👉 In the context of Linux systems (and specifically RHEL), these four terms describe how data or configurations are stored and how long they last.
+1. Static vs. Dynamic (The "Nature" of the Data)
+
+    - Static: Files that do not change unless an administrator manually modifies them. These are usually program binaries, libraries, or documentation.
+    - Example: /usr/bin/ls or a manual page in /usr/share/man.
+
+    - Dynamic: Files that are constantly updated by the system or applications as they work.
+    - Example: Database files in /var/lib or system logs in /var/log.
+
+2. Persistent vs. Runtime (The "Life" of the Data)
+    - Persistent: Data stored on a physical disk. It survives a power loss or a system reboot.
+    - Example: Any file in /etc (configurations) or /home (user files). Even /var/tmp is considered persistent compared to /tmp.
+    
+    - Runtime: Data stored in RAM. It is created when a process starts and is deleted immediately when the system reboots.
+    - Example: Everything in /run. If you see a file like /run/nginx.pid, it only exists as long as the Nginx service is active and the computer is on.
+
+
+👉 Runtime Configuration: If you run firewall-cmd --add-port=80/tcp, the change happens instantly (Runtime), but if you reboot, the rule is gone.
+
+👉 Persistent Configuration: If you run firewall-cmd --permanent --add-port=80/tcp, the change is written to the disk (Persistent). It won't take effect until you reload, but it will survive a reboot.
+
+👉 The path of a file or directory specifies its unique file system location. In Linux, we have two paths:
+1. Absolute Path:
+    - An absolute path is the complete address of a file or directory.
+    - Starts with: A forward slash / (the root).
+    - Behavior: It always points to the exact same location, no matter which folder you are currently in.
+    - Example: /var/log/messages or /home/user/documents/report.txt
+
+2. Relative Path
+    - A relative path is a shortcut based on your current location (Current Working Directory).
+    - Starts with: A directory name, a dot ., or double dots ...
+    - Behavior: It changes meaning depending on where you are. If you move to a different folder, the same relative path might break or point somewhere else.
+
+👉 Special Relative Notations:
+    . (Single dot): The current directory.
+    .. (Double dot): The parent directory (one level up).
+    ~ (Tilde): The current user's home directory.
+    - (dash): to old or previous working directory
+
+👉 Key Limits and Characteristics
+    - Filename Length: Most standard filesystems used in RHEL, such as XFS and ext4, strictly limit individual filenames to 255 bytes.
+
+    - Path Length: The maximum total length of a full path (e.g., /home/user/documents/file.txt) is typically 4,096 characters.
+
+    - Bytes vs. Characters: The limit is in bytes, not characters. While standard English (ASCII) characters use 1 byte each, special symbols or emojis can use up to 4 bytes, effectively shortening the allowed character count for that file.
+    
+    - Reserved Characters: You can use almost any character except for the null character (\0) and the forward slash (/), which is reserved as a directory separator.
+
+    

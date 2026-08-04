@@ -1,0 +1,85 @@
+sed — Stream Editor
+sed is a powerful text processing tool that reads input line by line, applies operations, and outputs the result.
+
+Basic Syntax --> # sed [options] 'command' filename
+
+Command		Meaning
+s			Substitute (find and replace)
+d			Delete line(s)
+p			Print line(s)
+a			Append after line
+i			Insert before line
+c			Change/replace entire line
+y			Translate characters
+q			Quit after first match
+
+######################################################################################################
+
+1. Substitute (s) — Most Common
+    Basic replace:
+        # sed 's/old/new/' file.txt (Replaces first occurrence on each line.)
+
+    Replace all occurrences:
+        # sed 's/old/new/g' file.txt (g = global (replace all on each line))
+
+    Replace specific occurrence:
+        # sed 's/old/new/2' file.txt (Replaces second occurrence on each line.)
+        # sed '/START/,/END/s/Foo/Bar/g' file.txt   (Replaces "Foo" with "Bar" only between lines containing "START" and "END".)
+
+2. Delete (d)
+    Delete specific lines:
+        # sed '3d' file.txt          # Delete line 3
+        # sed '2,5d' file.txt        # Delete lines 2 to 5
+        # sed '5,$d' file.txt        # Delete line 5 to end ($)
+
+    Delete lines matching pattern:
+        # sed '/error/d' log.txt     # Delete all lines containing "error"
+        # sed '/^#/d' config.cfg     # Delete all comment lines (starting with #)
+        # sed 's/^Error/FIXED/' log.txt     # Only replaces "Error" if it's at the start of a line.
+        # sed 's/fail$/FAILED/' log.txt     # Only replaces "fail" if it's at the end of a line.
+
+    Delete empty lines:
+        # sed '/^$/d' file.txt
+
+3. Print (p)
+    Print specific lines only:
+        # sed -n '3p' file.txt       # Print line 3 only
+        # sed -n '2,5p' file.txt     # Print lines 2 to 5
+
+
+    Print lines matching pattern:
+        # sed -n '/error/p' log.txt  # Print only lines with "error"
+        (-n suppresses automatic printing. Without it, p duplicates output.)
+
+4. Append (a) and Insert (i)
+    Append after a line:
+        # sed '3a\This is new text' file.txt    # Adds "This is new text" after line 3.
+
+    Insert before a line:
+        # sed '3i\This is new text' file.txt    # Adds "This is new text" before line 3.
+
+    Append after matching pattern:
+        # sed '/ERROR/a\--- Found Error ---' log.txt\
+
+########################################################################################################
+
+Option		Description										Example
+-i			In-place edit (modifies file)			sed -i 's/a/b/g' file.txt
+-i.bak		In-place + create backup				sed -i.bak 's/a/b/g' file.txt
+-n			Suppress automatic printing				sed -n '/pattern/p' file.txt
+-e			Multiple commands						sed -e 's/a/b/' -e 's/c/d/' file.txt
+-r			Extended regex							sed -r 's/([0-9]+)/NUM:\1/g' file.txt
+-E			Extended regex (modern)					sed -E 's/([0-9]+)/NUM:\1/g' file.txt
+
+########################################################################################################
+
+Multiple Commands
+
+    Method 1: -e flag
+        # sed -e 's/foo/bar/' -e '/^#/d' file.txt
+
+    Method 2: Semicolon (;)
+        # sed 's/foo/bar/; /^#/d' file.txt
+
+    Method 3: Using -f with a script file
+        # sed -f commands.sed file.txt

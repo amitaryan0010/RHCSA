@@ -1,0 +1,168 @@
+Systemd:
+    is a system and service manager. The name is short for ‘system daemon’, an ongoing service that manages the system. As it is also a service manager, it is responsible for start, stopping, and monitoring services. Systemd replaces the SysV init system and focuses on performance and resource management. 
+
+Systemd units:
+    - An important part of systemd are its unit files. These files define how components interact with each other, including the definition of a service or a mount point.
+    - To monitor and manage services on a system using systemd, unit files are used. These text-based files define what to run or do, relevant conditions, and any applicable dependencies.
+
+_______________________________________________________________________________________________________________________________________________
+Systemd features to secure units and services
+    - Securing a service means that one has to know what the underlying system functions and resources it uses. If we turn that around, it is as useful to know what it does not need.  This information alone can be used to set boundaries of a service.
+    - Systemd provides a huge set of features that may be used to set boundaries. Some define functions that can be used with the help of an allow list.
+
+Organization of a systemd service unit
+    - This unit has three sections: Unit, Service, and Install.
+            [root@rhel-9 ~]# systemctl cat sshd.service
+            # /usr/lib/systemd/system/sshd.service
+            [Unit]
+            Description=OpenSSH server daemon
+            Documentation=man:sshd(8) man:sshd_config(5)
+            After=network.target sshd-keygen.target
+            Wants=sshd-keygen.target
+
+            [Service]
+            Type=notify
+            EnvironmentFile=-/etc/sysconfig/sshd
+            ExecStart=/usr/sbin/sshd -D $OPTIONS
+            ExecReload=/bin/kill -HUP $MAINPID
+            KillMode=process
+            Restart=on-failure
+            RestartSec=42s
+
+            [Install]
+            WantedBy=multi-user.target
+    
+        [Unit]
+            First part is the [Unit], which defines the basics of the unit, including a description. It tells the unit if it has any dependencies. As there is no point running a ssh server if the sshd-keygen is not available yet, it is defining the sshd-keygen.target as its dependencies. It also tells the service manager that in what order to start up, in this case after the network is online, sshd-keygen are up and running.
+            What you can add (Requires=): If you want a strict dependency where sshd immediately aborts and fails if another unit is missing, you would use Requires=sshd-keygen.target
+        [Service]
+            The most interesting section is the second one. Within the [Service] definition we define what we are going to do. Not just what we start, but also what we expect. Things like where we should store the process ID, if we have preparation steps before starting our main program, and even what to do in the event things go wrong. This section is also the place where we can do security tuning of our unit.
+        [Install]
+            The latest section, [Install], defines at what stage this service should be started. In this case the common multi-user target, similar to what before was runlevel 3.
+
+Missing Section Types You Can Add:
+    While standard services use those three blocks, systemd supports specialized alternative sections depending on the file type suffix:
+    - [Timer]: Used in .timer files. It completely drops the [Service] block and uses options like OnCalendar= or OnBootSec= to drive scheduling.
+            [Timer]
+            OnBootSec=15min
+            OnUnitActiveSec=1d
+    - [Mount] / [Automount]: Used in .mount units to define filesystem attachments directly inside systemd instead of using /etc/fstab.
+            [Mount]
+            What=/dev/disk/by-uuid/f7845953-1463-4627-a015-16725715f30b
+            Where=/boot
+            Type=xfs
+
+    - [Socket]: Used for socket activation (e.g., sshd.socket). It configures systemd to listen on port 22 on behalf of the service. The main sshd.service stays completely turned off until an actual connection packet arrives, saving system RAM.
+            [Socket]
+            ListenStream=22
+            Accept=yes
+
+
+
+_______________________________________________________________________________________________________________________________________________
+Systemctl
+    - To control systemd units, such as services, the systemctl command is used.
+    - Some functions include:
+        # Start and stop service or unit
+        # Show status of a unit
+        # Show dependencies
+
+Commonly used systemctl commands and options
+Command				Action
+--------------------------------------------------------------------------------------------------
+daemon-reload		Reload the manager after making changes to a systemd unit file
+disable UNIT		Disable the unit
+edit UNIT			Create an override for a unit
+edit --full UNIT	Edit the main unit file, usually better to create override
+enable UNIT			Enable the unit
+is-enabled UNIT		Check if the unit is enabled
+list-units			Show active units
+list-units --all	Show all units including the ones that are inactive
+list-unit-files		List unit files and their state
+mask UNIT			Fully disable the unit (manual start not possible)
+reload UNIT			Request unit to reload configuration (not always possible, depends on support)
+restart UNIT		Restart the unit
+start UNIT			Start the unit
+status UNIT			Show the status details of the unit
+stop UNIT			Stop the unit
+unmask UNIT			Reactivate unit so it can be started again
+
+Show all units
+    # systemctl list-units              <-- shows an overview of available units. It groups them by type (automount, device, scope, path, mount, service, timer, etc).
+    # systemctl list-unit-files         <-- includes the name and the state.
+
+Inspect single systemd unit
+    # systemctl status UNIT        <-- Shows the current state of service, running/failed
+    # systemctl cat UNIT           <-- Show the unit the file and defined settings
+    # systemctl show UNIT          <-- to audit the service and see where additional hardening can be applied.
+    # systemctl list-dependencies UNIT <-- To show the related dependencies
+
+Disable or enable systemd units
+    # systemctl enable --now UNIT
+    # systemctl disable --now UNIT
+
+Dealing with failed units
+    # systemctl --state=failed      <-- Units can get into a failed state due to settings, missing dependencies, external conditions, issues with permissions and so. The troubleshooting of failed systemd units may provide hints. After resolving an issue, try a restart or reset of the unit.
+
+    # systemctl reset-failed        <-- can reset all failed units. Optionally, the unit name can be specified to target only that unit.
+
+Timers
+    # systemctl list-timers         <-- Timers are the replacement of cronjobs. Use the list-timers command to show them.
+
+System state
+    - As systemd is a system and service manager, it can also respond to commands to stop or reboot the system.
+    # systemctl reboot
+    # systemctl poweroff
+    # systemctl suspend
+    # systemctl hibernate 
+
+_______________________________________________________________________________________________________________________________________________
+
+Troubleshooting a failed systemd unit
+
+    - Incorrect file permissions:
+        Most services need to read or write data. When an underlying directory or specified file can’t be opened (for reading or writing), then the service may exit. Typically this is done with an exit code greater than 0, to indicate that execution of the program was terminated early.
+    - Configuration too strict:
+        When using the systemd security features to secure units, the configuration might prevent a service from starting as well. Commonly in that case a syscall is blocked or the file permissions or ownership are incorrect.
+
+Generic troubleshooting steps
+    - systemctl restart nginx.service
+
+    - systemctl reset-failed nginx.service
+        Restarting not making a difference? Try resetting the failed unit, as this resets also restart counters.
+
+    - systemctl revert nginx.service
+        If you made changes to a unit, consider clearing them. Not sure if a unit file was changed? Look at the output of the cat subcommand and see if it shows any overrides.
+        Configuration changed? Make a copy of the override.conf or any other drop-in files. Then use revert to restore a unit to its original configuration.
+
+    - Suspecting a blocked syscall?
+        seccomp blocking: If seccomp is blocking requests the requests, then they will be logged to the journal. Query the journal with journalctl and select the seccomp entries.
+        # journalctl _AUDIT_TYPE_NAME=SECCOMP
+
+    - Use strace
+        To enable strace from within the systemd service unit, we need to override first the ExecStart setting. By first clearing it, the entry from the vendor-supplied will be disabled. By clearing this initial entry, we can then override it with our customized line.
+            ExecStart=
+            ExecStart=/usr/bin/strace --absolute-timestamps=precision:us --daemonize --follow-forks --output=/tmp/strace.log  /usr/sbin/apachectl start
+_______________________________________________________________________________________________________________________________________________
+
+** ADVANCED **
+Applying systemd security features to actual services
+    - we can start tuning actual services. An example on how to perform this is shared in harden nginx with systemd.
+    - Systemd has a range of security features to help securing services running on your system. That is the good part. The big challenge with so many features is that it is hard to find out which ones you could or should apply, without breaking a service. That is why we started working on hardening profiles.
+    - The hardening profiles are predefined templates that are documented and tested against a default installation of a piece of software. System administrators then can use this as the foundation of their service and tune it slightly to their specific configuration.
+
+    - Hardening profiles
+        Software	        Description	                        Service
+        -------------------------------------------------------------------
+        Apache	            Web server	                        apache2
+        Dovecot	            IMAP and POP3 server	            dovecot
+        nginx	            Web server	                        nginx
+        OpenSMTPD	        SMTP daemon originally created by   opensmtpd 
+                            developers for OpenBSD and ported 
+                            to Linux and others
+
+    - Articles for Hardening profiles
+        * https://linux-audit.com/systemd/hardening-profiles/apache/
+        * https://linux-audit.com/systemd/hardening-profiles/dovecot/
+        * https://linux-audit.com/systemd/hardening-profiles/nginx/
+        * https://linux-audit.com/systemd/hardening-profiles/opensmtpd/

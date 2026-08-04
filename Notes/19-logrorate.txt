@@ -1,0 +1,150 @@
+What is logrotate?
+    - logrotate is a system utility designed to prevent log files from completely filling up your hard drive partitions.Instead of letting a file like /var/log/messages grow indefinitely to hundreds of gigabytes, logrotate breaks it down. It systematically renames the old file (e.g., adding a date suffix), creates a fresh empty log file, and purges the oldest historical records based on your retention rules.
+
+_______________________________________________________________________________________________________________________________________________
+ The Global Controller: /etc/logrotate.conf
+    # cat /etc/logrotate.conf
+        # see "man logrotate" for details
+
+        # global options do not affect preceding include directives
+
+        # rotate log files weekly
+        weekly
+
+        # keep 4 weeks worth of backlogs
+        rotate 4
+
+        # create new (empty) log files after rotating old ones
+        create
+
+        # use date as a suffix of the rotated file
+        dateext
+
+        # uncomment this if you want your log files compressed
+        #compress
+
+        # packages drop log rotation information into this directory
+        include /etc/logrotate.d
+
+        # system-specific logs may be also be configured here.
+
+    This file sets the fallback behavior for any log file on your system that doesn't have its own custom ruleset. Looking at your specific file output:
+        - weekly: Logs are rotated once every 7 days by default.
+        - rotate 4: The system retains exactly 4 older rotated log files. When the 5th week hits, the oldest file is deleted.
+        - create: Immediately after renaming the old log file, a brand new, empty log file is generated with matching permissions so applications don't crash.
+        - dateext: Rotated archives use the exact date stamp as a suffix (e.g., messages-20260727) instead of a generic number (e.g., messages.1).
+        - compress (Commented Out): Logs are kept in plain-text. If you remove the #, old logs will be compressed into .gz files to save disk space.
+        - include /etc/logrotate.d: This line tells the utility to read every file inside the application sub-directory next.
+
+    
+Application Snippets: /etc/logrotate.d/
+    - It has individual files for system daemons like sssd, dnf, firewalld, and rsyslog. These files override the global parameters with custom constraints.
+    # [root@rhel-9 logrotate.d]# ll
+    total 44
+    -rw-r--r--. 1 root root 130 Oct 14  2019 btmp
+    -rw-r--r--. 1 root root 160 Aug 27  2025 chrony
+    -rw-r--r--. 1 root root  88 Sep  9  2022 dnf
+    -rw-r--r--. 1 root root  93 Dec  3  2025 firewalld
+    -rw-r--r--. 1 root root 105 Jan  9  2026 insights-client
+    -rw-r--r--. 1 root root 162 Jun 18 23:23 kvm_stat
+    -rw-r--r--. 1 root root 226 Nov  4  2025 rsyslog
+    -rw-r--r--. 1 root root 155 May 21 17:51 samba
+    -rw-r--r--. 1 root root 289 Apr 15 18:18 sssd
+    -rw-r--r--. 1 root root  88 Jan 29 13:54 subscription-manager
+    -rw-r--r--. 1 root root 145 Oct 14  2019 wtmp
+
+_______________________________________________________________________________________________________________________________________________
+The Systemd Trigger Framework
+    * The Worker (logrotate.service): 
+        - When midnight strikes, the timer kicks this service awake. The service runs a one-shot process: /usr/sbin/logrotate /etc/logrotate.conf. It processes all files, updates them, and immediately exits back to an inactive state.
+        [root@rhel-9 logrotate.d]# systemctl status  logrotate.service
+        ○ logrotate.service - Rotate log files
+            Loaded: loaded (/usr/lib/systemd/system/logrotate.service; static)
+            Active: inactive (dead)
+        TriggeredBy: ● logrotate.timer
+            Docs: man:logrotate(8)
+                    man:logrotate.conf(5)
+
+    * The Timer (logrotate.timer): 
+        - This is the wake-up alarm clock. It runs silently in the background. Your output confirms it is waiting to countdown to exactly midnight (00:00:00 IST).
+        [root@rhel-9 logrotate.d]# systemctl status  logrotate.timer
+        ● logrotate.timer - Daily rotation of log files
+            Loaded: loaded (/usr/lib/systemd/system/logrotate.timer; enabled; preset: enabled)
+            Active: active (waiting) since Mon 2026-07-27 10:01:11 IST; 2h 36min ago
+            Until: Mon 2026-07-27 10:01:11 IST; 2h 36min ago
+            Trigger: Tue 2026-07-28 00:00:00 IST; 11h left
+        Triggers: ● logrotate.service
+            Docs: man:logrotate(8)
+                    man:logrotate.conf(5)
+        Jul 27 10:01:11 rhel-9 systemd[1]: Started Daily rotation of log files.
+
+_______________________________________________________________________________________________________________________________________________
+How to Run it Manually
+    # The Dry Run (Safe Simulation):
+        -  Test your logrotate rules without making real changes on disk. This prints step-by-step debug actions to your terminal screen.
+        # logrotate -d /etc/logrotate.conf
+    
+    # The Forced Rotation (Immediate):
+        - If a log file is massive right now and you cannot wait until midnight for the timer to tick, force an immediate rotation cycle.
+        # logrotate -f /etc/logrotate.conf
+
+    # Targeting a Single Component:
+        - If you only want to rotate rsyslog configurations independently.
+        # logrotate -v /etc/logrotate.d/rsyslog
+
+_______________________________________________________________________________________________________________________________________________
+Every time logrotate runs, it records the execution timestamp inside a state tracking file:
+    # cat /var/lib/logrotate/logrotate.status
+
+_______________________________________________________________________________________________________________________________________________
+Create a Custom Rule to Rotate Logs by Size and Compress Daily
+
+/var/log/myapp/*.log {
+    daily
+    size 100M
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root root
+    sharedscripts
+    postrotate
+        /usr/bin/systemctl reload myapp.service > /dev/null 2>&1 || true
+    endscript
+}
+
+- /var/log/myapp/*.log: Applies the rules to any file ending in .log within that specific folder.
+- daily / size 100M: The log will rotate if it hits 100 Megabytes, checked on a daily schedule.
+- compress / delaycompress: compress uses gzip to shrink old files. delaycompress waits until the next rotation cycle to compress the file, ensuring your application doesn't get blocked trying to write to a file that is actively being zipped.
+- missingok / notifempty: Prevents system errors if the log directory is temporarily empty, and skips the rotation cycle if the log file size is 0 bytes.
+- sharedscripts / postrotate: Tells logrotate to run the cleanup script only once per execution (not once per file) to signal your application to flush its memory hooks and write cleanly to the new empty log.
+
+
+
+Check for SELinux Rotation Failures
+    - Since logrotate runs as a highly restricted system service (system_u:system_r:logrotate_t:s0), it will fail silently if a log file has an incorrect SELinux label context.
+    - Run this command to search your audit framework for any security denials targeting the logrotate binary:
+        # ausearch -m AVC -c logrotate --raw
+
+        If you prefer a clean summary layout, pipe it into audit2allow:
+        # ausearch -m AVC -c logrotate | audit2allow -w -a
+
+
+_______________________________________________________________________________________________________________________________________________
+Rotate the logs manually:
+    # Safe test run (Simulated)
+    logrotate -d /etc/logrotate.d/rsyslog
+
+    # Actual run (Only rotates if time interval has passed)
+    logrotate -v /etc/logrotate.d/rsyslog
+_______________________________________________________________________________________________________________________________________________
+how to restore lost log data using systemd's journald cache?
+    - Recover /var/log/messages:
+        # journalctl --system _TRANSPORT=syslog SYSLOG_FACILITY=0 SYSLOG_FACILITY=3 SYSLOG_FACILITY=4 SYSLOG_FACILITY=10 --since "2026-07-26 00:00:00" --until "2026-07-27 13:13:00" >> /var/log/messages
+
+    - Recover /var/log/cron:
+        # journalctl --system SYSLOG_FACILITY=9 --since "2026-07-26 00:00:00" >> /var/log/cron
+
+    - Recover /var/log/secure:
+        # journalctl --system SYSLOG_FACILITY=4 SYSLOG_FACILITY=10 --since "2026-07-26 00:00:00" >> /var/log/secure                

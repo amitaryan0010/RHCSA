@@ -1,0 +1,224 @@
+The ps command displays information about running processes. Different options show different details.
+
+Basic PS Options
+    Option	        Meaning
+    -e	        Show all processes (system-wide)
+    -l	        Show long format (detailed info)
+    -f	        Show full format (very detailed)
+    -a	        Show processes from all users
+    -u	        Show processes by user
+    -x	        Include background processes
+
+##############################################################################
+
+Process States (S field)
+    Code	Meaning
+    R	Running
+    S	Sleeping (interruptible)
+    D	Disk sleep (uninterruptible)
+    Z	Zombie (terminated, waiting)
+    T	Stopped/Traced
+    W	Paging/Waiting
+
+##############################################################################
+EXAMPLES:
+
+[root@rhel-9 ~]# ps -e
+    PID TTY          TIME CMD
+      1 ?        00:00:12 systemd
+      2 ?        00:00:00 kthreadd
+
+[root@rhel-9 ~]# ps -l
+F S   UID     PID    PPID  C PRI  NI ADDR SZ WCHAN  TTY          TIME CMD
+1 S     0    2342    2340  0  80   0 -  5573 poll_s pts/1    00:00:00 sudo
+4 S     0    2343    2342  0  80   0 -  2173 do_wai pts/1    00:00:01 bash
+
+
+[root@rhel-9 ~]# ps -f
+UID          PID    PPID  C STIME TTY          TIME CMD
+root        2342    2340  0 07:59 pts/1    00:00:00 sudo -i
+root        2343    2342  0 07:59 pts/1    00:00:01 -bash
+
+
+** What you see:
+
+PID: Process ID
+TTY: Terminal (? = no terminal, tty1/pts/0 = terminal)
+TIME: CPU time used
+CMD: Command name
+F: Flags (0=normal, 4=root)
+S: State (S=sleeping, R=running, Z=zombie)
+UID: User ID/Username
+PPID: Parent Process ID
+C: CPU usage %
+PRI: Priority (higher = less priority)
+NI: Nice value (-20 to +19)
+SZ: Memory size (in KB)
+WCHAN: Wait channel (what it's waiting for)
+STIME: Start time (when process began)
+
+
+###################################################################################
+
+Nice Value in Linux
+nice value controls a process’s CPU scheduling priority.
+
+    Lower nice value = higher priority
+    Higher nice value = lower priority
+
+Range
+    -20 = highest priority
+    0 = default priority
+    19 = lowest priority
+
+Example:
+    # nice -n 10 tar -czf backup.tar.gz /home/path4cloud     --> Fork a process with nice value 10
+    # renice -n 5 -p 1234                                    --> Change priority of running process, This changes PID 1234 to nice value 5.
+    
+###################################################################################
+Example 1: Find all Python processes
+    # ps -ef | grep python
+
+Example 2: Show processes by specific user
+    # ps -u root
+
+Example 3: Show process tree (parent-child relationship)
+    # ps -ef --forest
+
+Example 4: Find zombie processes
+    # ps -l | grep Z
+
+Example 5: Show memory usage with processes
+    # ps aux
+    USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+    root         1  0.0  0.1  43876  7624 ?        Ss   09:00   0:02 /sbin/systemd
+    user      1234  2.5  5.3 145632 54322 pts/0    S    09:15   0:05 /usr/bin/vim
+
+    %CPU: CPU usage %
+    %MEM: Memory usage %
+    VSZ: Virtual memory (KB)
+    RSS: Resident set size (actual memory in KB)
+    STAT: Process state
+
+
+#######################################################################################
+
+Show top CPU consumers
+    # ps aux --sort=-%cpu | head -10
+
+Show top memory consumers
+    # ps aux --sort=-%mem | head -10
+
+#######################################################################################
+Understanding pidof vs pgrep
+
+Feature	                pidof	                        pgrep
+Search type	    Exact process name match	        Pattern/regex match
+Output	        Single PID (main process)	        All matching PIDs
+Use case	    Find main process	                Find all related processes
+
+[root@rhel-9 ~]# pidof sshd
+7209
+
+[root@rhel-9 ~]# pgrep sshd
+2300
+2305
+7209
+
+[root@rhel-9 ~]# ps -ef | grep -i sshd
+root        2300       1  0 07:58 ?        00:00:00 sshd-session: ansibleuser [priv]
+ansible+    2305    2300  0 07:59 ?        00:00:05 sshd-session: ansibleuser@pts/0
+root        7209       1  0 10:19 ?        00:00:00 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+root        8512    2343  0 15:26 pts/1    00:00:00 grep --color=auto -i sshd
+
+#######################################################################################
+pkill Explained
+
+pkill is the kill version of pgrep. It finds processes using a pattern and kills them.
+
+Basic Syntax --> pkill [options] <pattern>
+
+Real Examples
+# pkill sshd                --> Kill all sshd child processes
+# pkill -f "sshd: "         --> Kill specific SSH child processes only
+# pkill -x sshd             --> Kill processes by exact name (safer)
+# pkill -u user             --> Kill processes by user
+# pkill -9 nginx            --> Kill processes with signal, Force-kills them (no cleanup)
+# pkill -SIGTERM nginx      --> Kill with signal name (graceful termination)
+# pkill -e nginx            --> Kill and show what was killed
+# pkill -f "%CPU > 50"      --> Kill processes using more than 50% CPU
+
+#######################################################################################
+kill and Process Signals:
+    The kill command sends signals to processes, allowing you to control their execution (terminate, pause, resume, etc.). Signals are a way for the OS to communicate with processes.
+
+ Basic kill Syntax  --> kill [options] <PID>
+
+ Option	                     Description
+-s <signal>	        Send a specific signal (e.g., -s SIGTERM)
+-<signal_number>	Send signal by number (e.g., -9 for SIGKILL)
+-l	                List all available signals
+
+---------------------------------------------
+Common Signals
+
+Signal Name		Signal Number		Description									Default Action
+SIGTERM				15			Graceful termination (asks process to exit)		Terminate
+SIGKILL				9			Forceful termination (cannot be ignored)		Terminate
+SIGHUP				1			Hangup (often used to reload configs)			Terminate
+SIGINT				2			Interrupt (Ctrl+C)								Terminate
+SIGSTOP				19			Stop the process (freeze/pause execution)		Stop
+SIGCONT				18			Continue a stopped process						Continue
+SIGQUIT				3			Quit (dumps core)								Core dump
+SIGUSR1				10			User-defined signal 1							Terminate
+SIGUSR2				12			User-defined signal 2							Terminate
+
+#######################################################################################
+
+
+** Let say, 1234 is pid of nginx  and if we run
+    # kill -s SIGHUP 1234
+    or
+    # systemctl restart nginx
+what is difference: Both affect nginx, but they work very differently.
+
+Aspect				kill -s SIGHUP 1234						systemctl restart nginx
+------------------------------------------------------------------------------------------------
+What it does		Reloads config files					Stops and restarts completely
+Connections			Keeps existing connections alive		Closes all connections
+Downtime			Zero downtime                           Brief downtime (1-2 seconds)
+Process ID			Same PID stays (1234)					New PID assigned
+Use case			Deploy config changes safely			Major upgrades or buggy state
+Risk level			Very safe								Low risk but causes disruption
+
+#######################################################################################
+REAL TIME MONITORING
+
+# ps -Ao user,uid,comm,pid,pcpu,pmem,rss,vsz,stat,start,time,tty --sort=-pcpu | head -10
+
+Column		Meaning
+pmem		% of physical memory used
+rss			Resident Set Size — actual RAM in use (KB)
+vsz			Virtual memory size — total allocated (KB)
+pcpu		% of CPU
+stat		Process state (R = running, S = sleeping, Z = zombie, + = foreground)
+start		When process started
+time		CPU time consumed
+etime		Elapsed time since start
+args		Full command with arguments
+cmd			Command name
+nice		Process priority (-20 to 19)
+pri			Current priority
+
+# top
+# htop
+# watch -n 'ps aux'
+# free -h
+# df -h
+# iostat -x 1 5
+# vmstat 1 10
+# sar -u (CPU usage)
+# sar -r (memory usage)
+# sar -b (I/O and transfer rates)
+# sar -d (disk activity)
+# sar -W (swapping activity)

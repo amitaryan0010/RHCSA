@@ -1,0 +1,360 @@
+** Main configuration for YUM/DNF package manager
+    --> On RHEL 9, yum is actually a compatibility wrapper for dnf. When you run yum, it internally calls dnf. However, the configuration file /etc/yum.conf is still used.
+
+The History: Why Two Files?
+    YUM (Yellow dog Updater, Modified) — The Old Way
+        Created: Early 2000s
+        Default on: RHEL 5, 6, 7
+        Language: Python 2
+        Config file: /etc/yum.conf
+        Status: Deprecated (but still works for compatibility)
+    DNF (Dandified YUM) — The New Way
+        Created: 2015
+        Introduced on: RHEL 8+
+        Language: Python 3
+        Config file: /etc/dnf/dnf.conf
+        Status: ✅ Official replacement for YUM on RHEL 8 and later
+        Why created: YUM was slow, had dependency resolution issues, lacked features
+
+----------------------------------------
+On RHEL 9 — What Actually Happens?
+
+When you run yum on RHEL 9:
+    # which yum
+    /usr/bin/yum
+
+    # ls -lh /usr/bin/yum
+    lrwxrwxrwx. 1 root root 5 Apr 15 10:30 /usr/bin/yum -> dnf-3
+    
+    # file /usr/bin/yum
+    /usr/bin/yum: symbolic link to /etc/alternatives/yum
+
+What's really happening:
+    User runs "yum"
+            ↓
+    /usr/bin/yum is a symlink
+            ↓
+    Actually calls DNF internally
+            ↓
+    DNF reads configuration from /etc/dnf/dnf.conf
+            ↓
+    Also checks /etc/yum.conf for backward compatibility
+
+So on RHEL 9:
+    ✅ yum command still works (for backward compatibility)
+    ✅ It internally uses DNF
+    ✅ Configuration is read from /etc/dnf/dnf.conf (primary)
+    ⚠️ /etc/yum.conf is also read (for old scripts/tools that expect it)
+
+File Locations and Hierarchy
+    Configuration File Locations:
+        /etc/dnf/dnf.conf          ← PRIMARY config (DNF reads this first)
+        /etc/yum.conf              ← LEGACY config (read for compatibility)
+        /etc/dnf/plugins/          ← Plugin configurations
+        /etc/yum.repos.d/          ← Repository definitions (.repo files)
+        /etc/dnf/vars/             ← Variable definitions (like $releasever)
+
+Repository Files:
+    Both YUM and DNF read from the same repository directory:
+        # ls /etc/yum.repos.d/
+
+Settings in /etc/dnf/dnf.conf take priority over /etc/yum.conf.
+
+------------------------------------------
+Lets exammine current dnf.conf file:
+
+[root@rhel-9 bash]# cat /etc/dnf/dnf.conf
+[main]
+gpgcheck=1
+installonly_limit=3
+clean_requirements_on_remove=True
+best=True
+skip_if_unavailable=False
+
+Here, each directive has its own meaning, few are already enabled by default, we can chech all applied parameters with # dnf config-manager -- dump
+
+Setting								Value			    Meaning
+gpgcheck=1							Enabled			    Always verify GPG signatures of packages before installing
+installonly_limit=3					3				    Keep only the last 3 versions of kernel packages (older ones are auto-removed)
+clean_requirements_on_remove=True	Enabled			    Automatically remove unused dependencies when uninstalling a package
+best=True							Enabled	Always 	    try to install the best (newest) available version of a package
+skip_if_unavailable=False			Disabled		    Do not skip repositories that are unavailable (fail if a repo is down)
+
+We can have many more:
+cachedir                            /var/cache/yum      Location where downloaded RPM packages and metadata are stored.
+keepcache=0(default)                0/1                 1=Controls whether downloaded packages are kept after installation. (if 0, then delete post install)
+debuglevel                          0-10                Controls how much detail is shown during yum operations.    
+                                                        Value	Output Level
+                                                        0	    Quiet (almost no output)
+                                                        1	    Errors only
+                                                        2	    Warnings + Errors
+                                                        3–5	    Normal (default is usually 2)
+                                                        6–10	Very verbose (useful for troubleshooting)                
+
+logfile                             /var/log/yum.log    Path to the main YUM/DNF log file.
+exactarch=1(default)                0/1                 if 1, Only install packages matching the system’s architecture
+                                                        if 0, Allow installing packages from other architectures if available
+obsoletes=1 (default)               0/1                 if 1, Automatically replace obsolete packages with newer ones
+                                                        if 0, Ignore obsoletes (not recommended)
+---------------------------------------------------
+Recommended /etc/yum.conf for RHEL 9; Here’s a clean and practical configuration:
+
+    [main]
+    cachedir=/var/cache/yum
+    keepcache=0
+    debuglevel=2
+    logfile=/var/log/yum.log
+    exactarch=1
+    obsoletes=1
+
+    gpgcheck=1
+    installonly_limit=3
+    clean_requirements_on_remove=True
+    best=True
+    skip_if_unavailable=False                           
+
+
+--------------------------------------------------------
+How to Find All Available Directives + Default Values
+    # dnf config-manager --dump
+--------------------------------------------------------
+
+Plugin-Related Directives
+    Plugin configuration files are stored in:
+        # /etc/dnf/plugins/
+        Common plugins include:
+            download
+            versionlock
+            needs-restarting
+            copr
+            config-manager    
+
+You can enable/disable individual plugins by editing their .conf file:
+    # /etc/dnf/plugins/versionlock.conf
+
+
+[root@rhel-9 bash]# ll /etc/dnf/plugins/
+total 16
+-rw-r--r--. 1 root root 351 Sep  9  2022 copr.conf
+drwxr-xr-x. 2 root root   6 Feb 11 20:36 copr.d
+-rw-r--r--. 1 root root  30 Sep  9  2022 debuginfo-install.conf
+-rw-r--r--. 1 root root  17 Jan 29 13:54 product-id.conf
+-rw-r--r--. 1 root root 213 Jan 29 13:54 subscription-manager.conf
+
+
+Each .conf file in /etc/dnf/plugins/ controls a specific plugin's behavior. These plugins extend DNF's functionality beyond basic package management.
+1) copr.conf — COPR (Community Projects Repository)
+    What it does:
+        Manages access to COPR (Fedora Community Projects Repository)
+        COPR allows third-party developers to build and distribute RPM packages
+        Similar to PPA (Personal Package Archive) in Ubuntu
+
+    # cat /etc/dnf/plugins/copr.conf
+    [fedora]
+    hostname = copr.fedorainfracloud.org
+    protocol = https
+    port = 443
+
+    # To add another Copr hub, make a new section with its hostname, protocol and port.
+    # (protocol and port are optional and their default values are `https` and `443` respectively).
+    # [name-of-hub]
+    # hostname = hub-hostname
+    # protocol = https (optional)
+    # port = 443 (optional)
+
+    When to use:
+        Installing packages from community developers (e.g., newer versions not in official repos)
+        ⚠️ Use with caution — COPR packages are community-maintained, not officially supported by Red Hat
+
+2) debuginfo-install.conf — Debuginfo Plugin
+    What it does:
+        Automatically installs debug symbols for packages when needed
+        Used for debugging crashes or analyzing performance
+
+    cat /etc/dnf/plugins/debuginfo-install.conf
+    [main]
+    enabled=1
+    autoupdate=0
+
+    When to use:
+        - Install a package WITH its debug symbols
+            # dnf debuginfo-install httpd
+                * This will install:
+                    - httpd (main package)
+                    - httpd-debuginfo (debug symbols)
+        - Real-world scenario:
+            * A service crashes and you need to analyze the core dump
+            * You need to run gdb (GNU Debugger) on a binary
+            * You're performance profiling an application
+
+3) product-id.conf — Product ID Plugin
+    What it does:
+        Manages RHEL product identification information
+        Part of Red Hat subscription management
+        Stores which RHEL product you're running
+
+    #  cat /etc/dnf/plugins/product-id.conf
+        [main]
+        enabled=1
+
+    What it manages:
+        - View your product ID
+            # cat /etc/rhsm/facts/product_id.json
+        - View installed product certs
+            # ls /etc/pki/product/
+        - Real-world scenario:
+            * Red Hat needs to know which RHEL product you have (RHEL Server, RHEL Workstation, etc.)
+            * Used for subscription management
+            * Ensures you have access to the correct repositories
+
+4) subscription-manager.conf — Subscription Manager Plugin
+    What it does:
+        Manages your Red Hat subscription status
+        Controls access to entitled repositories
+        Validates your subscription with Red Hat
+
+    # cat /etc/dnf/plugins/subscription-manager.conf
+        [main]
+        enabled=1
+
+        # When following option is set to 1, then all repositories defined outside redhat.repo will be disabled
+        # every time subscription-manager plugin is triggered by dnf or yum
+        disable_system_repos=0        
+
+    - Real-world scenario:
+        * You have a Red Hat subscription (paid or trial)
+        * You need access to RHEL security updates and patches
+        * Red Hat needs to verify your subscription is valid
+
+--------------------------------------------------------------
+
+Repository Files:
+Both YUM and DNF read from the same repository directory:
+    # # ll /etc/yum.repos.d/
+        total 332
+        -rw-r--r--. 1 root root    282 Apr 30 10:57 epel.repo
+        -rw-r--r--. 1 root root 332251 Jul 20 12:54 redhat.repo
+
+    # [root@rhel-9 ~]# cat /etc/yum.repos.d/epel.repo
+        [epel-9-everything-x86_64]                                                              <-- Repository Header
+        name=EPEL 9 Everything x86_64                                                           <-- Basic Repository Information
+        baseurl=https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/                      <-- actual web URL
+        gpgcheck=1                                                                              <-- GPG (Signature Verification)
+        repo_gpgcheck=0                                                                         <-- Don't check repo metadata signature
+        gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-2f0b8a71-c837-45b8-b7d0-2eb86cc3d0bd-0       <-- GPG key path
+        module_hotfixes=0                                                                       <-- Controls how modular packages are handled                                 
+        exclude=yamllint ansible-lint                                                           <-- Blocks specific packages 
+        
+    # cat /etc/yum.repos.d/redhat.repo
+        [codeready-builder-for-rhel-9-x86_64-eus-debug-rpms]
+        name = Red Hat CodeReady Linux Builder for RHEL 9 x86_64 - Extended Update Support (Debug RPMs)
+        baseurl = https://cdn.redhat.com/content/eus/rhel9/$releasever/x86_64/codeready-builder/debug
+        enabled = 0
+        gpgcheck = 1
+        gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+        sslverify = 1                                                                           <-- SSL/HTTPS Certificate Verification
+        sslcacert = /etc/rhsm/ca/redhat-uep.pem                                                 <-- Path to the Certificate Authority (CA) certificate
+        sslclientkey = /etc/pki/entitlement/3259762877653865839-key.pem                         <-- Prove to Red Hat that you have a valid subscription
+        sslclientcert = /etc/pki/entitlement/3259762877653865839.pem                            <-- Prove to Red Hat that you have a valid subscription
+        metadata_expire = 86400                                                                 <-- How long to cache repository metadata before re-fetching
+        enabled_metadata = 0                                                                    <-- Controls whether to download metadata for this disabled repo
+        sslverifystatus = 1                                                                     <-- Verifies the OCSP (Online Certificate Status Protocol) status
+                                                                                                    Checks if the server certificate has been revoked
+                                                                                                    1 = Check revocation status (secure)
+                                                                                                    0 = Don't check (less secure)
+
+.repo files are repository configuration files used by DNF (and its predecessor, YUM) to define where to download RPM packages from. These files tell your system:
+
+Where to find packages (URLs)
+How to verify their authenticity (GPG keys, SSL certificates)
+Which packages to include or exclude
+How often to refresh metadata
+
+
+🔧      Common Directives in .repo Files
+    Here’s a complete list of the most important directives you can use in .repo files:
+
+    📌 Core Directives (Required or Common)
+
+        Directive			Values					Description										Example
+        [repository-id]		Any unique name			Unique identifier for the repository			[epel]
+        name				Any string				Human-readable name for the repository			name=EPEL 9
+        baseurl				URL						Base URL where packages are stored				baseurl=https://example.com/repo
+        enabled				0 or 1					Enable/disable the repository					enabled=1
+        gpgcheck			0 or 1					Verify GPG signatures of packages				gpgcheck=1
+        gpgkey				File path or URL		Path to GPG key for signature verification		gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-epel-9
+
+        🔒 Security Directives
+        repo_gpgcheck		0 or 1					Verify GPG signature of repository metadata		repo_gpgcheck=0
+        sslverify			0 or 1					Verify SSL certificate of the repository		sslverify=1
+        sslcacert			File path				Path to CA certificate for SSL verification		sslcacert=/etc/rhsm/ca/redhat-uep.pem
+        sslclientcert		File path				Path to client certificate for authentication	sslclientcert=/etc/pki/entitlement/123456789.pem
+        sslclientkey		File path				Path to client private key for authentication	sslclientkey=/etc/pki/entitlement/123456789-key.pem
+        sslverifystatus		0 or 1					Check certificate revocation status (OCSP)		sslverifystatus=1
+
+        ⏱️ Performance & Caching Directives
+        metadata_expire		Seconds or time string	How long to cache repository metadata			metadata_expire=86400 (24 hours)
+        enabled_metadata	0 or 1					Download metadata for disabled repos			enabled_metadata=0
+        retries				Number					Number of retries for failed downloads			retries=5
+        timeout				Seconds					Timeout for downloads							timeout=30		
+
+        📦 Package Filtering Directives
+        exclude				Package names			Exclude specific packages from this repo		exclude=package1 package2
+        includepkgs			Package names			Include only specific packages from this repo	includepkgs=package1 package2
+        module_hotfixes		0 or 1					Allow module overrides							module_hotfixes=0
+
+        🌐 Network Directives
+        proxy				URL						HTTP/HTTPS proxy for downloads					proxy=http://proxy.example.com:8080
+        proxy_username		String					Username for proxy authentication				proxy_username=user
+        proxy_password		String					Password for proxy authentication				proxy_password=pass
+
+🛠️ How .repo Files Work
+    Step-by-Step: How DNF Uses .repo Files
+    DNF reads all .repo files in /etc/yum.repos.d/.
+    Parses each repository section (e.g., [epel]).
+    Checks if the repo is enabled (enabled=1).
+    Downloads repository metadata (package lists, versions, dependencies).
+    Verifies metadata (GPG signatures, SSL certificates).
+    Caches metadata (for metadata_expire duration).
+    Allows package installation from the repo.
+
+
+📝 How to Create a Custom .repo File
+    1: Create a New .repo File
+        # sudo nano /etc/yum.repos.d/custom.repo
+        # Add Repository Definition
+            [my-custom-repo]
+            name=My Custom Repository
+            baseurl=https://example.com/path/to/repo
+            enabled=1
+            gpgcheck=1
+            gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-custom
+
+        # Save and Test
+            - dnf repolist
+
+    2: We can create the local repo as well, copy the rpm files to a directory and then create the repodata using crearerepo command:
+        # yum -y install createrepo
+        # mkdir /root/local-repo
+        # cd /root/local-repo/
+        # dnf download bash-completion htop java-11-openjdk --destdir=/root/local-repo (or copy from another source)
+        # createrepo -v .
+        # vi /etc/yum.repos.d/local.repo
+            [my-local-repo]
+            name=My Local Offline Repository
+            baseurl=file:///root/local-repo
+            enabled=1
+            gpgcheck=0
+        # dnf clean all
+        # dnf repolist
+        Updating Subscription Management repositories.
+        repo id                                                                            repo name
+        epel-9-everything-x86_64                                                           EPEL 9 Everything x86_64
+        my-local-repo                                                                      My Local Offline Repository
+        rhel-9-for-x86_64-appstream-rpms                                                   Red Hat Enterprise Linux 9 for x86_64 - AppStream (RPMs)
+        rhel-9-for-x86_64-baseos-rpms                                                      Red Hat Enterprise Linux 9 for x86_64 - BaseOS (RPMs)
+
+        # dnf list java-11-openjdk
+        Available Packages
+        java-11-openjdk.x86_64                          1:11.0.25.0.9-7.el9                                                           my-local-repo
+        java-11-openjdk.x86_64                          1:11.0.25.0.9-7.el9                                                           rhel-9-for-x86_64-appstream-rpms

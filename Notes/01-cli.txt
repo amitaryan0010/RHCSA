@@ -1,0 +1,111 @@
+✅  In Red Hat Enterprise Linux (RHEL), the command-line interface (CLI)—often called the terminal or shell (typically Bash)—is a powerful text-based environment for managing systems. 
+
+    We usually access the command line through a terminal app, which runs a shell (a program that reads your commands and executes them). Common shells:
+        - bash (very common) (Bourne Again Shell)
+        - sh (Bourne Shell)
+        - zsh
+        - ksh (korn shell, used ofr Linux/Unix and c user)
+        - csh (c shell, default shell for c user)
+
+    Accessing the Terminal in RHEL
+        GUI: Click "Activities" -> "Terminal" in the GNOME desktop.
+
+    Keyboard Shortcut: Ctrl+Alt+T (usually defaults to launching the Terminal app).
+
+👉 SHELL: is the utility that process your requestes. When you type a command at your terminal, then shell interprets the command and execute it. The shell uses standard syntax for all commands. Basically, it converts the user language into kernel language.
+
+👉 kernel: is heart of Linux OS. It manages resource of linux means facilities available in Linux. for example, facility to store data, print data on printer, memory file management etc. Kernel decides who will use this resource, for how long and when. It receeives task from the shell and performs them. Kernel performs following tasks:
+    - IO management
+    - Process management
+    - Device management
+    - File management
+    - Memory management
+
+👉 Shell Prompt:
+    [path4cloud@rhel-9 ~]$
+    (here, path4cloud is user, @ used for separation, rhel-9 is hostname, ~ tilde sign indicates that the logged in user is in his home directory, $ telling that it is a normal user)
+    ( if its # instead of $ then, a privileged user like root is logged in)
+
+👉 Virtual Consoles: 
+    - User access the bash shell through a terminal. A linux machine's physical console supports mulitple virtual console which act like separate terminals, Each virtual console supports an independent login user session.
+    - If the graphical environment is available, it will run on the first virtual console and other console can be accessed by holding ctrl + alt and pressing a function key (f2 to f6)
+
+👉 Remote Access: Use ssh to connect from a remote workstation.
+
+👉 Offline Helper: Use rhel-cla (RHEL Lightspeed Assistant) for AI-powered command help, available for RHEL 9.6+. 
+
+👉 <command> <options> <arguments>
+    - command to run
+    - options to adjust the behaviour of the command (normally start with one -  or two -- dashes) 
+    - Arguments which are typically targets of the command
+
+👉 In Bash, the command bind -P is used to list all keyboard shortcuts (key bindings) and the specific functions they are attached to. 
+    When you run bind -P, it displays a list of Readline functions and their current key sequences in a human-readable format. Here is how to interpret the output and use it effectively: 
+    How to use bind -P
+        List all bindings: Run bind -P to see every function. It will show "is not bound to any keys" if a function is currently unused.
+        Search for a specific shortcut: Since the list is long, pipe it to grep
+
+👉 Essential RHEL Commands (Basic)
+    - pwd: Print Working Directory (shows where you are).
+    - ls -al: List all files, including hidden ones, in long format.
+    - cd <directory>: Change directory.
+    - mkdir -p <dir>: Create a new directory (and parent directories).
+    - touch <file>: Create an empty file or update its timestamp.
+    - rm -rf <file/dir>: Remove files or directories recursively and forcibly.
+    - cp -r <source> <dest>: Copy files or directories.
+    - mv <source> <dest>: Move or rename files/directories.
+    - cat <file>: View file contents. 
+
+👉 System Administration Commands (RHEL Specific) 
+    - dnf / yum: Package manager to install/update software (e.g., sudo dnf install httpd).
+    - systemctl: Manage services (e.g., systemctl start firewalld).
+    - journalctl: View system logs.
+    - nmcli: NetworkManager CLI for networking (e.g., nmcli dev status).
+    - hostnamectl: Set or view system hostnames.
+    - lsblk: List block devices/disks.
+    - lscpu: View CPU architecture information. 
+
+👉 Command-Line Navigation & Editing 
+    - Ctrl+a: Move cursor to the beginning of the line.
+    - Ctrl+e: Move cursor to the end of the line.
+    - Ctrl+u: Erase from cursor to the beginning of the line.
+    - Ctrl+k: Erase from cursor to the end of the line.
+    - ctrl+w: Erase teh precding word
+    - ctrl+y: Paste erased text
+    - ctrl+<left_arrow>: jump to the beginning of the previous word
+    - ctrl+<right_arrow>: jump to the beginning of the next word
+    - ctrl+r: search the histroy list of command for a patteren
+    - history: Display previously run commands.
+    - !number: Run a specific command from history.
+    - alias <name>='<command>': Create a shortcut for a long command
+
+👉 CLI help from manuals
+    - we can use `man` command to take the help from CLI for a command or keyword
+    - Types of man pages:
+        - man 1 <> (executable program or shell commands)
+        - man 2 <> (system calls-function provided by the kernel)
+        - man 3 <> (library call-functions within program libraries)
+        - man 4 <> (special files-usually found in /dev)
+        - man 5 <> (file formats and conventions e.g /etc/passwd)
+        - man 6 <> (games)
+        - man 7 <> (miscellaneous information)
+        - man 8 <> (system administration root command)
+        - man 9 <> (kernel routines)
+
+    ** man 1, man 5 and man 8 are frequently used manual pages.
+
+    ** man -k <keyword>
+    (this command tells about the particular command that how many man pages are holding that keyword in DB, sometimes this command doesnot run or report Nothing Appropriate then refresh the man database with # sudo mandb)
+
+    ** apropos <keyword> 
+    ( it will list alll available manual pages which are matching with this keyword)
+
+    ** info <command> 
+    ( often more detailed than man pages and includes hyperlinks to related information)
+
+👉 Input/Output redirection
+    - standard input denotes with <
+    - standard output denotes with >
+    - standard error denotes with 2> (system defined error)
+
+    ** 2>&1 (captures error and output both)

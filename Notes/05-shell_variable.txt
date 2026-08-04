@@ -1,0 +1,39 @@
+✅ Manipulating the shell variable
+
+👉 to take effects at login time:
+- /etc/profile (applies at login time for all users for all types of shells)
+- ~/.profile (apply for a user only for all types of shell at login)
+
+👉 to take effect for bash shell
+- /etc/bashrc (applies at login time for all users for bash shell only)
+- ~/.bashrc (apply for a user only for bash shell at login)
+
+👉  SHELL PARAMETER or VARIABLES
+- HISTFILESIZE=<num> (to save the number of command in history inside that shell)
+- HISTTIMEFORMAT='%F %T ' (to save the time of that command when it was ran)
+- LESS='-X', export this and help you to prevent the output from screen with less command
+
+- we can create the alias in file for any command. for example: sc="grep ^[^#] $1" (it will display the only uncommented line from a file which is being passed to 'sc' as first argument, like #sc /etc/fstab)
+** to disaply the all 'alias' is being used in current shell, run # alias and will display the all alias is being set.
+
+- We can create the function as well, group of command with one single alias
+for example:
+mcd() {
+    mkdir -pv $1 && cd $1
+}
+(here mcd is a function and it will get the first argument as input and create the directory with that name and then change the current working directory to that)
+
+- We can set the default editor to edit the file.
+for example: set inside the file as:
+export EDITOR=/usr/bin/nano
+
+- We can set the custom path as well in addition to a current path.
+export PATH=$PATH:/mnt/bin
+(here, whatever the path value is that will take this /mnt/bin as an additional path)
+
+** to list all environment variables, run 'env' command to display the all variables.
+
+- echo $PS1 (will display the current prompt set)
+[\u@\h \W]\$
+(here \u is user, @\h is @hostname , \W, current working directory)
+

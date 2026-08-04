@@ -1,0 +1,228 @@
+Find command: as name tells, it is used to find something inside linux accross the server/file system.
+
+It has many options/flags which can manipuate the findging pattern and result.
+
+########################################
+Symbolic Link Handling
+# Directory structure:
+# /tmp/test/
+# ├── real_dir/
+# │   └── file.txt
+# └── link_dir -> real_dir/
+
+find -P /tmp/test        # Does NOT go into link_dir
+find -L /tmp/test        # DOES go into link_dir (same as real_dir)
+find -H /tmp/test        # Follows link_dir only if it's in the initial path
+
+
+########################################
+Operators 
+find . \( -name "*.txt" -o -name "*.md" \)      # Find .txt and .md, both, notice -o which is specified as OR operator
+find . ! -name "*.txt"                          # invert the result, look for file which are not .txt
+find . -name "*.txt" -size +1M                  # here, both must be true, AND operator, It is implicit, you can specify -a but optional
+find . -name "*.jpg" -o -name "*.png"           # either .jpg or .png
+find . -name "*.txt" , -name "*.md"             # Comma – evaluate both but only return result of EXPR2
+
+
+########################################
+Normal Options (Always True, Specified Early)
+find / -maxdepth 3 -name "*.conf"        # Only go 3 levels deep
+find / -mindepth 2 -name "*.log"         # Skip the top-level directory
+find / -xdev -name "*.txt"               # Don't search mounted filesystems
+
+########################################
+Tests (The Heart of find)
+    Name Tests
+        find . -name "*.txt"                           # All .txt files
+        find . -iname "*.TXT"                          # .txt, .TXT, .tXt (Match filename (case-insensitive))
+        find . -regex ".*\.\(txt\|md\|py\)$"           # .txt, .md, or .py files
+        find . -path "*/src/*.py"                      # Python files in 'src' directory
+
+    Type Tests (-type)
+        find / -type f -name "*.conf"     # All config files
+        find / -type d -name "logs"       # All directories named "logs"
+        find / -type l                    # All symlinks
+        find / -type b                    # All Block devices
+        find / -type c                    # All chracter files
+
+    Size Tests (-size)
+        find . -size +1G                   # Files larger than 1 GB
+        find . -size -10k                  # Files smaller than 10 KB
+        find . -size 1024c                 # Files exactly 1024 bytes
+
+    Time Tests
+        find / -atime -7                 # Files accessed in the last 7 days
+        find / -mtime +30                # Files not modified in 30+ days (old files)
+        find / -mmin -60                 # Files modified in the last hour
+        find / -newer /etc/passwd        # Files newer than /etc/passwd
+
+    Permission Tests (-perm)
+        find / -perm /4000               # Files with SUID bit set
+        find / -perm -4000               # Same as above (any of the mode bits)
+        find . -perm 755                 # Files with EXACTLY rwxr-xr-x
+        find . -perm -222                # Files writable by someone (owner | group | other)
+        find . -perm /222                # Files writable by at least one of owner/group/other
+
+    Ownership Tests
+        find / -user root                 # All files owned by root
+        find / -nouser                   # Files with no owner (orphaned files)
+        find /home -uid 1000             # Files owned by user ID 1000
+
+     Link Tests
+        -links N	File has exactly N hard links	    -links 1 (file has no other hard links)
+        -links +N	More than N hard links	            -links +1 (file has other hard links)
+
+    Inode Tests
+        find . -inum 12345               # Find file by inode number
+        find . -samefile /etc/hosts      # Find all hard links to /etc/hosts
+
+    Other Tests
+        -empty	File is empty (0 bytes) or empty directory
+        -readable	File is readable by current user
+        -writable	File is writable by current user
+        -executable	File is executable by current user
+        -context CONTEXT	Match SELinux context	-context system_u:object_r:etc_t
+
+        find . -empty                     # All empty files and directories
+        find . -readable                  # Files you can read
+        find / -fstype ext4               # All files on ext4 filesystems
+
+########################################
+########################################
+Actions (What to Do with Results)
+
+
+________________________________________________________________________________________________________
+
+Action	                Meaning
+-------------------------------------------------
+-print	                Print filename (default)
+-print0	                Print with null separator (for piping to xargs -0)
+-exec COMMAND 	        Run command on each file
+-exec COMMAND {} +	    Run command with files in bulk
+-ok COMMAND         	Same as -exec but asks for confirmation
+-execdir COMMAND    	Like -exec but runs from the file's directory
+-prune	                Skip this path (don't descend)
+________________________________________________________________________________________________________
+
+# Delete all .tmp files
+    find /tmp -name "*.tmp" -delete
+
+# Search for files and process them
+    find /logs -name "*.log" -size +100M -exec gzip {} \;
+
+# Bulk chmod
+    find . -type f -exec chmod 644 {} +
+
+# prune (-prune tells find to stop descending into a matching directory (or skip a matching file))
+    find . -name "1.png" -prune -o -name "*.txt" -print
+    How it Works (Step by Step):
+        -name "1.png" -prune → If you find a file/directory named 1.png, SKIP it completely (don't descend into it)
+        -o → OR (if the above didn't match)
+        -name "*.txt" -print → Find all *.txt files and print them
+
+# Custom printf format
+    find . -printf "%p\t%s\t%u\t%g\n"
+        # Print format codes:
+        # %p = filename
+        # %s = size in bytes
+        # %u = owner
+        # %g = group
+        # %A+ = last access time (ISO format)
+        # %T+ = last mod time (ISO format)
+        # %C+ = last status change time
+        # %Y = file type (f, d, l, etc.)
+
+Syntax	                Behavior	                                    Example
+{} \;	    Run command once per file	                        find . -name "*.txt" -exec rm {} \;
+{} +	    Run command once for all files (like xargs)	        find . -name "*.txt" -exec rm {} +
+
+
+########################################
+########################################
+Full Real-World Examples
+Example 1: Find Large Old Log Files
+    # find /var/log -type f -name "*.log" -size +100M -mtime +30 -exec gzip {} \;
+    # find / -xdev -type f -ls | awk '{print$7" " $11}' | head
+    # find / -xdev -type f -ls | awk '
+    {
+    size = $7
+    if (size >= 1024^3) printf "%.2f GB  %s\n", size/(1024^3), $11
+    else if (size >= 1024^2) printf "%.2f MB  %s\n", size/(1024^2), $11
+    else if (size >= 1024) printf "%.2f KB  %s\n", size/1024, $11
+    else printf "%d B  %s\n", size, $11
+    }
+    ' | head
+
+Example 2: Find World-Writable Files (Security Issue)
+    # find / -type f -perm /o=w
+
+Example 3: Find Empty Directories
+    # find / -type d -empty
+
+Example 4: Find SUID/SGID Binaries
+    # find / -type f \( -perm -4000 -o -perm -2000 \) -ls
+
+Example 5: Find and Delete Old Temp Files (Safer)
+    # find /tmp -type f -atime +7 -ok rm {} \;
+    (The -ok asks for confirmation before deleting.)
+
+Example 6: Find Files by User and Copy
+    # find /home -user john -type f -name "*.pdf" -exec cp {} /backup/john/ \;
+
+
+########################################
+########################################
+locate: 
+    is a command-line tool in Linux that finds files by name almost instantly — much faster than find.
+    If not installed then "yum install mlocate -y" and then run "updatedb"
+
+How It Works
+    Unlike find (which searches the filesystem live), locate searches a pre-built database of filenames.
+
+The Process:
+    updatedb (usually run daily via cron) builds a database of all files on the system
+    locate simply searches that database — no disk crawling needed
+
+Examples
+
+# locate file1.txt              --> Search for a filename
+# locate "*.conf"               --> Search with wildcards (requires *)
+# locate -i "readme"            --> Search case-insensitively
+# locate -c "*.log"             --> Count results
+# locate -l 5 "*.conf"          --> Show only first 5 results
+# locate -r "\.txt$"            --> Regex: files ending in .txt
+
+The Database
+    /var/lib/mlocate/mlocate.db     # Default on RHEL/CentOS/Fedora
+    /var/lib/plocate/plocate.db     # If using plocate (newer)
+
+Check stats
+    (Force update the database)
+    # locate -S
+    Database /var/lib/mlocate/mlocate.db:
+        49,012 directories
+        272,922 files
+        46,723,301 bytes in file names
+        16,171,169 bytes used to store database
+
+Use Custom db:
+    If we want to create the new index (DB), based on some file/directory then first we need to create the db and then we can scan that DB with locate command to get the result faster.
+    # updatedb -U <index_path> -o <path_to_new_db>
+
+    # In this example, we created a custom DB from /root/linux_virt directory and saved it to /root/mydb.db, then while locating the file we refer to custom DB with -d flag, it will just show the result from that DB only, when we located from default DB, it located other files too.
+
+    #   [root@rhel-9 ~]# updatedb -U /root/linux_virt/ -o /root/mydb.db
+        [root@rhel-9 ~]# ls
+        1.png  2.jpg  ans.sh  ask.sh  file1.txt  final.sh  grep_example.txt  linux_virt  loop2.sh  loop.sh  mydb.db  test.txt
+        
+        [root@rhel-9 ~]# locate -d /root/mydb.db vendor.txt
+        /root/linux_virt/lib/python3.13/site-packages/pip/_vendor/vendor.txt
+        
+        [root@rhel-9 ~]# locate vendor.txt
+        /home/ansibleuser/.local/share/containers/storage/overlay/dc1b4e313a7c51f08a7895a453ae94b32701395abc2abdd817f19576635cca7b/diff/usr/lib/python3.12/site-packages/pip/_vendor/vendor.txt
+        /home/ansibleuser/.local/share/containers/storage/overlay/dc1b4e313a7c51f08a7895a453ae94b32701395abc2abdd817f19576635cca7b/diff/usr/share/licenses/python3.12-rpds-py/cargo-vendor.txt
+        /home/ansibleuser/.local/share/containers/storage/overlay/edce4592d8b3916972281d1409d8a25f8e2c2e05a50bdbd933379a139fd2cd1c/diff/usr/lib/python3.12/site-packages/pip/_vendor/vendor.txt
+        /root/linux_virt/lib/python3.13/site-packages/pip/_vendor/vendor.txt
+        /usr/lib/python3.9/site-packages/pip/_vendor/vendor.txt
+        /usr/share/licenses/python3.12-rpds-py/cargo-vendor.txt

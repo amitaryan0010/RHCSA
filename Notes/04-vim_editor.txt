@@ -1,0 +1,113 @@
+✅ Editing text file from shell with VIM Editor
+👉 vim is a vi-improved version os vi editor and can be get by installing this package 'vim-enhanced'
+
+👉 Basic shorthands to run quickly inside vim
+
+- When we run he vim,it will open in default command mode.
+- To write something, you need to go to insert mode so press 'i' to get into insert mode.
+- After writing the data, we need extended command mode and you can press ':' (colon) on keyboard to get into extended command mode and then you can save it with 'w' button.
+- type ':q' to quit from the file.
+- We can use ':wq' at same time to save and exit from the file at sametime.
+
+- with ':w <path>', we can give the path as well to save the opened file at defined path.
+
+👉 Additonal shrothands inside default command mode
+- press 'y' to copy the entire line
+(it will copy/cut/paste/delete on the line where cursor is present)
+- pres 'yw' to copy the single word where the current cusror.
+- If we want to paste few lines at a particular line in same file then we can use lines_to_copy,t<new_lines> (let say, we want to copy from line 2 to 4 and paster into line 9 then we can run in command mode- :2,4t9, hit enter, it will copy the line 2 to 4 and paste them to line 9)
+- press 'p' to paste the copied line
+- If wanted to paste mulitple times, then press number let say 3 and then 'p', so it will paste the line 3 times.
+- press 'a' to append the text after the current cursor position
+- press 'A' to append the text at the end of line
+- press 'dd' to delete the line or same to cut the line
+- press 'x' to delete the character where cursor is present
+- press 'dw' to delete the word, it will delete the whole word where your cursor is present.
+- press 'shift + d' to delete the whole line after the cursor.
+- press 'dG' to delete all lines till the end of line from the position of cursor
+- press 'cw' for replace/change mode which will delete the word and then land you in insert mode, and type the new word.
+- press 'cc' Change entire line at current cursor position
+- press 'C' change from cursor to end of line
+- press 'd$' to delete from the current cursor position until the end of the line.
+- press 'q!' to exit the file wihout saving the last changes.
+- press 'u' to undo the changes before saving.
+- press 'B' to move backward one word from current word
+- press 'w' to move forward one word from current word
+- press 'shift+{' to move the beginning of the paragraph
+- press 'shift+}' to move the end of the paragraph
+
+- We can move towards up/down/left/right with arrow keys but we have support from alphabet keys as well:
+    H - move towards left
+    L - move towards right
+    K - move towards up
+    J - move towards down
+
+    (if we want move multiple lines at one then it support little advanced technique)
+    - if we want to move 5 lines below from current posstion then press `5J`
+    - if we want to move 4 lines up from current posstion then press `4K`
+
+
+👉 Special mode 
+**Visual line mode
+- press 'V' uppercase or Shift+v to get the visual line appear like we used to get in notepad or word file, then select the words or whole line or multiple lines with arrow keys and then delete those.
+
+**Visual block mode
+- press 'ctrl+v' to select the data visually vertically, like we do in word with 'Alt' key and then you can delete those vertically selected data with del key or x key.
+
+- to get the indedation towards right side, then you can select the data with 'shift+v' and then press '>' key to shift the data towards right.
+
+👉 To save and exit from the file
+- from extended command mode: press ':wq'
+- from default command mode: press 'shift+zz' or twice uppercase 'ZZ'
+
+👉 Deafult configuration file is '/etc/vimrc'
+👉 If you want to change the behaviour of vim then create a file under your home directory as hidden file and place the changes.
+#- vim ~/.vimrc
+autocmd FileType yaml setlocal ai ts=2 sw=2 nu cuc
+(here all these options will be applied to yaml base content file)
+
+- to set the color:
+colo desert
+
+- to set the number
+set nu
+
+# vimtutor
+
+👉 Finding a word
+- After opening the file, press '/' (forward slash) and then word_to_find and press enter, that word will be highlighted in yellow color towards forward, if we want to search backwards then press '?' (question mark) and then word_to_find and press enter. If multiple occurrence of same word then all will be highlighted, if you want to navigate to all word then press 'n' to next word and if you want to go backward, then press 'N' to previouos word.
+- Once you searched or find the word, it will leave that word highlighted, if you want to clear that then press ':" and type 'nohlsearch' and hit enter, it will clear the highlighted word. (:nohlsearch)
+
+👉 Replace a word.
+- If we want to replace any word/string with another then we can run below in command mode.
+    :%s/<old_word>/<new_word>/g   (% is for all lines, s is for substitute, g is for globally means in all lines)
+
+    :s/<old_word>/<new_word>/g (replace all occurrence of old_word to new_word in the current line)
+
+    :1,2s/<old_word>/<new_word>/g (here, old_word will be replaced in first 2 lines, and with g all occurrence in first 2 lines)
+
+    :%s/<old_word>/<new_word>/gc (here, c is for confirmation before each replace it will ask for confirmation)
+
+👉 Copy the content from another file to one file while reading
+- Take the cusror to the line where we want to append or add the content from antoher file then go to command mode and type 'r' and path_of_file to insert
+    :r /etc/passwd (hit enter, it will add the content from passwd file to current file)
+
+    If we want to add the content at a specific line then we can mention the line number before r
+    :5r /etc/passwd (hit enter, it will insert the all content starting from line 5)
+
+👉 Opening multiple files with vim:
+    We can open multiple files with vim, specify the all file names in single command, it will open all the files.
+    If we want to switch to next file then in command mode, ':next' it will display the content from second file.
+    If want to go previous file, then in command mode, ':prevents' it will display the content of first file.
+
+    If you want to display all the opened files, then in command mode, ':args' will display all files name and current file name will be in [] square bracket.
+
+    We can open the new file from current vim opened file then in command mode, ':edit <new_file_name>' it will open the new file at same location.
+
+    We can split our screen as well horozontly then in command mode, ':split <another file name>' it will open the both files at same time, to switch from window use 'ctrl + w' and then J to go to below window which will switch your cursor from one window to another window.
+
+    Use ':vsplit' to open the files vertically.
+
+    To close the current opened or active window, in command mode, ':close'
+
+    To close the opened files, in command mode, ':wqa'

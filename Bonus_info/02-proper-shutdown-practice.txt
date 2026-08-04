@@ -1,0 +1,49 @@
+Best Practices to shutting down the Linux System especially in multi user environment:
+
+# shutdown -P +30 (power off the server in next 30 min from now)
+# poweroff (power off immediately)
+# reboot (reboot immediately)
+# shutdown -r now (reboot immediately)
+# shutdwon -c (cancle all scheduled shutdown)
+# halt (stop all the process immediately and halt the CPU but not power off)
+
+** We should send proper and ample notification to all logged in user before we shutdown or reboot.
+
+1) wall Command (Standard Method): This command sends a message to all logged-in users.
+    # echo "Your message here" | wall
+    OR
+    # wall "Your message here"
+
+2) shutdown Command with a Broadcast Message : The shutdown command itself can broadcast a message to all users before shutting down or rebooting.
+    # shutdown -h +5 "Your message here"
+
+3) pkill + write (Alternative for Specific Users)
+    Send to a Specific User:
+        # write username "Your message here"
+        (Press Ctrl+D to end the message.)
+    
+    Send to All Users (Using pkill):
+        echo "Your message here" | pkill -u $(who | awk '{print $1}' | sort -u | tr '\n' ' ')
+        (This sends a message to all logged-in users via their terminals.)
+
+
+5) mesg Command (Allow/Deny Messages) - Users can block messages using:
+    # mesg n  # Disable messages
+    # mesg y  # Enable messages
+    (If a user has mesg n, they won’t receive wall or write messages.)
+
+6) notify-send (For GUI Users) - If users are logged in via a graphical environment (GNOME, KDE, etc.), you can use:
+    # notify-send "System Alert" "Server will shutdown in 5 minutes!"
+    (This sends a popup notification (requires a desktop environment))
+
+
+|   Command     |         Usage                         |       Scope           |   Requires Root?  |
+-----------------------------------------------------------------------------------------------------
+|   wall        | wall "Message"                        | All logged-in users   |   ✅ Yes          |
+|   shutdown    | shutdown -h +5 "Message"              | All users + shutdown  |   ✅ Yes          |
+|   write       | write user "Message"                  | Single user           |   ❌ No           |
+|   pkill       | echo "Msg" \| pkill -u user1 user2    | Multiple users        |   ✅ Yes          |
+|   notify-send | notify-send "Title" "Message"         | GUI users only        |   ❌ No           |
+
+
+

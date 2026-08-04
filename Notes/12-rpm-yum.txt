@@ -1,0 +1,196 @@
+RPM (Red Hat Package Manager) 
+    RPM (RPM Package Manager) is a package management system used by Red Hat-based Linux distributions (RHEL, CentOS, Fedora, Rocky Linux, AlmaLinux, etc.). It allows you to:
+    Install, update, remove, and query software packages.
+    Verify package integrity.
+    Manage dependencies (though yum/dnf handle dependencies better).
+
+RPM Package File Structure
+    An RPM package (.rpm file) contains:
+        Metadata (name, version, dependencies, description, etc.)
+        Files (binaries, configs, libraries, etc.)
+        Scripts (pre-install, post-install, pre-uninstall, post-uninstall)
+        Signatures (for verification)
+
+----------------------------------------------------------------------------------------------
+Basic RPM Commands
+
+Command					Description								Example
+rpm -i				Install a package						rpm -i package.rpm
+rpm -U				Upgrade a package						rpm -U package.rpm
+rpm -F				Freshen (upgrade only if installed)		rpm -F package.rpm
+rpm -e				Erase (remove) a package				rpm -e package_name
+rpm -q				Query (check if installed)				rpm -q httpd
+rpm -qa				Query all installed packages			rpm -qa
+rpm -ql				List files in a package					rpm -ql httpd
+rpm -qi				Show package info						rpm -qi httpd
+rpm -qf				Query which package owns a file			rpm -qf /etc/httpd/conf/httpd.conf
+rpm -qc				List config files in a package			rpm -qc httpd
+rpm -qd				List documentation files				rpm -qd httpd
+rpm -q --scripts	Show scripts (pre/post install)			rpm -q --scripts httpd
+rpm -V				Verify a package						rpm -V httpd
+
+RPM Installation Options
+--replacepkgs	    Reinstall even if already installed	    rpm -U --replacepkgs nginx-1.20.1-1.el9.x86_64.rpm
+--replacefiles	    Replace files from other packages	    rpm -U --replacefiles nginx-1.20.1-1.el9.x86_64.rpm
+--oldpackage	    Downgrade a package	                    rpm -U --oldpackage nginx-1.18.0-1.el9.x86_64.rpm
+--nodeps	        Skip dependency checks (⚠️ Dangerous)   rpm -i --nodeps nginx-1.20.1-1.el9.x86_64.rpm
+--force	            Force install (overwrites files)	    rpm -i --force nginx-1.20.1-1.el9.x86_64.rpm
+--noscripts	        Skip pre/post-install scripts	        rpm -i --noscripts nginx-1.20.1-1.el9.x86_64.rpm
+--prefix	        Install to a custom directory	        rpm -i --prefix /opt/nginx nginx-1.20.1-1.el9.x86_64.rpm
+--test	            Test installation without actually installing	rpm -i --test nginx-1.20.1-1.el9.x86_64.rpm
+
+
+RPM Query Options
+rpm -V				Verify a package						rpm -V httpd
+-q or --query		Query a package							rpm -q httpd
+-qa					Query all installed packages			rpm -qa
+-ql					List all files in a package				rpm -ql httpd
+-qi					Show package info (name, version, etc.)	rpm -qi httpd
+-qf					Query which package owns a file			rpm -qf /etc/httpd/conf/httpd.conf
+-qc					List config files						rpm -qc httpd
+-qd					List documentation files				rpm -qd httpd
+-qpR                List dependencies(not installed)        rpm -qpR httpd
+-qpR                List dependencies (installed)           rpm -qR httpd
+-qs					List state of files 					rpm -qs httpd
+					(normal, missing, replaced)	
+-ql --last			List files sorted by modification time	rpm -ql --last httpd
+-q --whatprovides	Find which package provides a file		rpm -q --whatprovides /usr/sbin/httpd
+-q --whatrequires	Find which packages require a dependency	rpm -q --whatrequires libnghttp2.so.14
+-q --changelog		Show changelog							rpm -q --changelog httpd
+-q --scripts		Show pre/post-install scripts			rpm -q --scripts httpd
+-q --triggers		Show triggers							rpm -q --triggers httpd
+
+RPM Removal Options
+-e or --erase	    Remove a package	                    rpm -e httpd
+--nodeps	        Skip dependency checks (⚠️ Dangerous)	rpm -e --nodeps httpd
+--noscripts	        Skip pre/post-removal scripts	        rpm -e --noscripts httpd
+--test	            Test removal without actually removing  rpm -e --test httpd
+
+-------------------------------------------------------------------------------------------------------
+
+RPM Verification Options
+-V or --verify	    Verify a package	                    rpm -V httpd
+-Va	                Verify all installed packages	        rpm -Va
+-Vf	                Verify a file	                        rpm -Vf /etc/httpd/conf/httpd.conf
+-Vp	                Verify a package file (.rpm)	        rpm -Vp nginx-1.20.1-1.el9.x86_64.rpm
+
+[root@rhel-9 ~]# rpm -Vf /etc/passwd
+.......T.  c /etc/bashrc
+
+(here these dots(.), has a specila meaning)
+Verification Output Symbols
+Symbol		Meaning
+S			File size differs
+M			File mode (permissions) differ
+5			MD5 checksum differs
+D			Device number differs
+L			Symlink differs
+U			User ownership differs
+G			Group ownership differs
+T			Modification time differs
+?			File is missing
+p           If capabilities is altered
+
+example:
+# rpm -V httpd
+If output is empty → package is intact. If output is S.5....T → file size, checksum, and modification time differ.
+
+----------------------------------------------------------------------------------------------------------------
+
+RPM Database Management
+
+Command	            Description
+rpm --rebuilddb	    Rebuild the RPM database (if corrupted)
+rpm --initdb	    Initialize a new RPM database
+rpm --import	    Import a GPG key
+rpm --checksig	    Verify package signature
+
+The RPM database is stored at:
+    # /var/lib/rpm/ 
+    -rw-r--r-- 1 root root 8.0M Jul 20 05:30 Packages
+    -rw-r--r-- 1 root root 1.2M Jul 20 05:30 Name
+    -rw-r--r-- 1 root root 512K Jul 20 05:30 Basenames
+    -rw-r--r-- 1 root root 256K Jul 20 05:30 Requirename
+    -rw-r--r-- 1 root root 128K Jul 20 05:30 Providename
+    (The main file is Packages — this is the BerkeleyDB database that holds all package metadata.)
+
+    # ls -lh /var/lib/rpm/
+    total 136M
+    -rw-r--r--. 1 root root 113M Jul 20 11:19 rpmdb.sqlite
+    -rw-r--r--. 1 root root  32K Jul 20 11:19 rpmdb.sqlite-shm
+    -rw-r--r--. 1 root root    0 Jul 20 11:19 rpmdb.sqlite-wal
+
+    (RHEL 9 RPM Database — SQLite Format Explained. Your system is using the newer SQLite-based RPM database (not the old BerkeleyDB format))
+
+Common Causes of RPM DB Corruption
+⚡ Power failure during rpm/yum/dnf install
+🔴 Killed process (Ctrl+C) during installation
+💾 Disk full during package operation
+🔒 Stale lock files (__db.00x files)
+🐛 Multiple concurrent rpm commands running simultaneously
+(To fix check out rpmdb-corrupt.txt under Bonus_info)
+
+-----------------------------------------------------------------------------------------------------------
+RPM and GPG Signatures
+
+Check Signature of a Package
+    # rpm --checksig bash-completion-2.11-5.el9.noarch.rpm
+        bash-completion-2.11-5.el9.noarch.rpm: digests signatures OK
+    OR
+    # rpm -K bash-completion-2.11-5.el9.noarch.rpm
+        bash-completion-2.11-5.el9.noarch.rpm: digests signatures OK
+
+Import a GPG Key
+    # rpm --import RPM-GPG-KEY-centos9
+
+Listing installed GPG Key   
+    # rpm -q gpg-pubkey
+        gpg-pubkey-fd431d51-4ae0493b
+        gpg-pubkey-5a6340b3-6229229e
+        gpg-pubkey-3228467c-613798eb
+
+-----------------------------------------------------------------------------------------------------------
+
+rpm2cpio — Extract Files from RPM Without Installing
+rpm2cpio converts an RPM package into a cpio archive, which you can extract using cpio.
+
+Basic Syntax :  # rpm2cpio package.rpm | cpio -idmv
+
+Options for rpm2cpio
+    Option	Description
+    -h	    Show help
+    -v	    Verbose output
+
+Options for cpio (Used with rpm2cpio)
+    Option	Description
+    -i	    Extract files
+    -d	    Create directories as needed
+    -m	    Preserve modification time
+    -v	    Verbose output
+    -t	       List files (instead of extracting)
+
+EXAMPLES:
+
+1: Extract RPM to Current Directory
+    # rpm2cpio bash-completion-2.11-5.el9.noarch.rpm | cpio -idmv
+
+2: List Files in RPM Without Extracting
+    # rpm2cpio bash-completion-2.11-5.el9.noarch.rpm | cpio -tv
+
+3: Extract to a Specific Directory
+    # mkdir /root/bash
+    # cd /root/bash/
+    # rpm2cpio /root/bash/bash-completion-2.11-5.el9.noarch.rpm | cpio -idmv
+
+4: Extract Only a Specific File
+    # rpm2cpio bash-completion-2.11-5.el9.noarch.rpm | cpio -idmv ./etc/profile.d/bash_completion.sh
+
+5: Extract and Preserve Permissions
+    # rpm2cpio package.rpm | cpio -idmv --preserve-permissions
+
+When to Use rpm2cpio?
+    ✅ Extract a single file from an RPM without installing the whole package. 
+    ✅ Inspect RPM contents before installing. 
+    ✅ Recover a file from a corrupted package. 
+    ✅ Manually install files (not recommended for production).
+    ❌ Do not use for normal package installation (use rpm -i or dnf install instead).

@@ -1,0 +1,69 @@
+ What is the kernel ring buffer 
+    - The kernel ring buffer on Linux holds important system events and makes it available to the system administrator. It is maintained by the kernel itself and is stored in memory. The contents of the ring buffer is available to user space, so it can easily be viewed with a tool like dmesg. The kernel will log events to the buffer that are usually related to the boot process, kernel modules being loaded or unloaded, hardware support, systemd activation, firewall events, memory, and serious issues with processes.
+    - The kernel uses a ring buffer to store printk() messages, preserving critical information during system startup. This preserves early boot messages before services such as syslog can read and save them to permanent storage.
+    - The ring buffer is a cyclic data structure that has a fixed size, and is hard-coded into the kernel. Users can display data stored in the kernel ring buffer through the dmesg command or the /var/log/boot.log file. When the ring buffer is full, the new data overwrites the old.
+    
+    Buffer size
+        - The size of the kernel ring buffer is defined during compilation of the kernel itself, so typically your Linux distribution decides an acceptable size. To find this, we need to extract the value of CONFIG_LOG_BUF_SHIFT from the kernel configuration file. This file is typically stored in /boot or /proc.
+        # [root@rhel-9 ~]# grep ^CONFIG_LOG_BUF_SHIFT /boot/config-$(uname -r)
+        CONFIG_LOG_BUF_SHIFT=20                         <-- The base size represented by this configuration is 1 Megabyte (1 MiB).
+        [root@rhel-9 ~]# ls /boot/ | grep -i config
+        config-5.14.0-611.16.1.el9_7.x86_64
+        config-5.14.0-611.49.1.el9_7.x86_64
+        config-5.14.0-687.17.1.el9_8.x86_64
+
+    ** The Multi-CPU Scaling Bonus (CONFIG_LOG_CPU_MAX_BUF_SHIFT)While the base size is 1 MiB, Red Hat configures a second parameter in both RHEL 8 and RHEL 9 called CONFIG_LOG_CPU_MAX_BUF_SHIFT=12. This tells the kernel: 
+    "If this machine has many CPU cores, automatically allocate extra buffer space per core to handle concurrent logging activity."
+        - Single-CPU VM: The buffer scales strictly at its baseline 1 MiB capacity.
+        - Multi-CPU Production Server: The kernel will dynamically scale the total size of your dmesg ring buffer memory up to several megabytes automatically based on your overall active core count.
+
+        # [root@rhel-9 ~]# grep ^CONFIG_LOG_CPU_MAX_BUF_SHIFT /boot/config-$(uname -r)
+        CONFIG_LOG_CPU_MAX_BUF_SHIFT=12
+
+_______________________________________________________________________________________________________________________________________________
+
+Role of printk on log-levels and kernel logging 
+    - Kernel messages have log-levels that indicate their importance. The kernel ring buffer collects all messages. The kernel.printk parameter controls which buffer messages reach the console.
+    - The log-level values break down in this order:
+        0: Kernel emergency. The system is unusable.
+        1: Kernel alert. Action must be taken immediately.
+        2: Condition of the kernel is considered critical.
+        3: General kernel error condition.
+        4: General kernel warning condition.
+        5: Kernel notice of a normal but significant condition.
+        6: Kernel informational message.
+        7: Kernel debug-level messages.
+
+_______________________________________________________________________________________________________________________________________________
+By default, kernel.printk in latest RHEL (9/10) has the following values:
+    [root@rhel-9 ~]# sysctl kernel.printk
+    kernel.printk = 7       4       1       7
+
+    The four values define the following, in order:
+        Console log-level, defines the lowest priority of messages printed to the console.
+        Default log-level for messages without an explicit log-level attached to them.
+        Sets the lowest possible log-level configuration for the console log-level.
+        Sets default value for the console log-level at boot time.
+
+_______________________________________________________________________________________________________________________________________________
+dmesg: show log events from kernel ring buffer
+    - The dmesg command can be used to show the contents of the Linux kernel ring buffer and important kernel logging. It includes events about the boot process, hardware, systemd, segmentation faults of processes, and more.
+    - Install it if it missing: dnf install util-linux-core
+
+_______________________________________________________________________________________________________________________________________________
+Usage: Available options
+
+# dmesg                         <-- Show log entries from the kernel ring buffer
+# dmesg -C OR --clear           <-- Clear the ring buffer
+# dmesg -T 0r --ctime           <-- Show the date and time instead of time in seconds
+# dmesg -l err OR --level=err   <-- Only show errors
+# dmesg -l warn OR --level=warn <-- Only show warnings (others log levels are info,debug,notice)
+# dmesg --follow                <-- Live message like tail -f
+# dmesg -k                      <-- It only prints the kernel messages (filter out userspace messages)
+# dmesg -f kern                 <-- It filters the messages by facility (e.g., kern, user, daemon)
+# dmesg -x                      <-- Displays each log message with readable facility and severity labels.
+                                    daemon:info  : [   17.033535] systemd[1]: Started Journal Service.
+                                    syslog:info  : [   18.177537] systemd-journald[633]: Received client request to flush runtime journal.
+                                    kern  :info  : [   20.239604] input: PC Speaker as /devices/platform/pcspkr/input/input6
+
+** dmesg read the logs from /proc/kmsg

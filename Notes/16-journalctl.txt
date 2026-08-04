@@ -1,0 +1,137 @@
+Linux systems continuously generate logs from services, kernel events, and system activities. With systemd, these logs are centralized in the journal, making journalctl the primary tool for accessing and analyzing them. It provides structured, searchable logs with powerful filtering options, simplifying troubleshooting and system monitoring.
+
+Understanding The Systemd Journal System
+    Journalctl is the command-line tool that lets you access and filter the systemd journal – basically your system’s diary of everything that happens behind the scenes.
+
+
+A Quick Reference For Journalctl Commands
+Here’s a handy reference table of the most useful journalctl commands for quick lookup:
+
+Command											Description											Example
+---------------------------------------------------------------------------------------------------------------------------------------------------
+journalctl										View all journal entries							journalctl
+journalctl -r									Show entries in reverse order (newest first)		journalctl -r
+journalctl -f									Follow journal in real-time (like tail -f)			journalctl -f
+journalctl -n N									Show only the last N entries						journalctl -n 50
+journalctl -b									Show logs from current boot							journalctl -b
+journalctl -b -1								Show logs from previous boot						journalctl -b -1
+journalctl --since today						Show only today’s logs								journalctl --since today
+journalctl --since "YYYY-MM-DD"					Show logs since specific date						journalctl --since "2023-09-10"
+journalctl --since "HH:MM" --until "HH:MM"		Show logs between specific times					journalctl --since "09:00" --until "10:00"
+journalctl -u SERVICE							Show logs for specific service						journalctl -u nginx
+journalctl -k									Show only kernel messages							journalctl -k
+journalctl -p PRIORITY							Filter by priority level							journalctl -p err
+journalctl _PID=N								Show logs for specific process ID					journalctl _PID=1234
+journalctl -g "PATTERN"							Search for pattern in messages						journalctl -g "error|failed"
+journalctl -o json								Output in JSON format								journalctl -o json
+journalctl -o cat								Show only message field								journalctl -o cat
+journalctl --disk-usage							Check journal disk usage							journalctl --disk-usage
+journalctl --vacuum-time=TIME					Remove entries older than TIME						journalctl --vacuum-time=2weeks
+journalctl --vacuum-size=SIZE					Limit journal to SIZE								journalctl --vacuum-size=1G
+journalctl -D PATH								Use journal at specified path						journalctl -D /var/log/journal/UUID
+
+_______________________________________________________________________________________________________________________________________________
+
+Focusing On High Priority Error Messages
+
+Priority Level	Description						When to Use
+0: emerg		System is unusable				Major system failure
+1: alert		Action needed immediately		Critical security issues
+2: crit			Critical conditions				Hardware failures
+3: err			Error conditions				Application crashes
+4: warning		Warning conditions				Resource issues
+5: notice		Normal but significant			Security notices
+6: info			Informational					Normal operations
+7: debug		Debug-level messages			Detailed troubleshooting
+
+_______________________________________________________________________________________________________________________________________________
+
+Output Formatting Options
+
+journalctl --no-pager           <-- Disabling Pager For Continuous Terminal Output
+journalctl -o json              <-- Converting Log Output To JSON Format For Script Processing
+journalctl -o cat               <-- Stripping Metadata To See Only The Core Message Content
+journalctl -g "error|failed"    <-- Searching Log Entries With Grep-Like Pattern Matching
+journalctl _PID=1234            <-- Monitoring Individual Process IDs For Targeted Debugging
+journalctl --disk-usage         <-- Analyzing Journal Storage Consumption On Your System
+journalctl --vacuum-time=2weeks    <-- Reclaiming Disk Space By Removing Outdated Journal Entries
+
+
+journalctl -u nginx -b -p err   <-- This shows all error messages from the nginx service since the last boot.
+journalctl -b -1 -p crit        <-- Check critical messages from the previous boot to find what caused a crash.
+
+
+journal -xe                     <-- x flag gives detailed explanations, n flag, put you at the end 
+journal -n                      <-- shows only last 10 lines (tail)
+
+journal --since "-1 hour"       <-- shows for last 1 hour
+journal --since "-10 min"       <-- shows for last 10 min
+
+journalctl --list-boots         <-- Will list the boots journals from last reboots
+
+_______________________________________________________________________________________________________________________________________________
+
+Configuring Persistent Journal Storage For Complete System History
+
+By default, RHEL9 has Storage set to auto in /etc/systemd/journal.conf
+    [root@rhel-9 log]# cat /etc/systemd/journald.conf | grep Storage
+    #Storage=auto
+
+    It has 3 options:
+        - auto: systemd-journald service checks if /var/log/journal directory exists then it will write the logs there else, under /run/log/journal/
+        - volatile: always write at /run/log/journal
+        - persistent: always write at /var/log/journal (if directory doesn't exist then it will create the directory)
+
+    If you set the Storage to persistent in live/running system then :
+        - try to restart the service:
+            # systemctl restart systemd-journald
+        - if still it will not wrtiing, you need to flush the journal so that daemon will start wrting journal under /var/log/journal:
+            # journalctl --flush
+        - reboot, it will auto start writing.
+
+    If still it is not writing, then check the permission, ownership and selinux context:
+        # chown root:systemd-journal /var/log/journal
+        # chmod 2755 /var/log/journal
+        # semanage fcontext -a -t systemd_journal_t "/var/log/journal(/.*)?"
+        # restorecon -RvF /var/log/journal
+        OR
+        simply run this command:
+        # systemd-tmpfiles --create --prefix /var/log/journal
+
+_______________________________________________________________________________________________________________________________________________
+
+We can change the default parameter in /etc/systemd/journal, like:
+    - Storage to auto/volatile/persistent
+    - SystemMaxUse=500M (maximum disk space the journal folder can consume under /var/log/journal/. Once logs cross this cap (e.g., 500 Megabytes), journald automatically deletes the oldest logs to make room for new ones.)
+    - SystemMaxFiles=100 & RuntimeMaxFiles=100 (explicitly sets a maximum limit of 100 individual journal files )
+    - SystemKeepFree=1G (Ensures that journald always leaves at least 1 Gigabyte of free space on your disk partition for other system services, stopping log growth if disk space runs critically low.)
+    - MaxRetentionSec=1month (Explicitly limits logs by time/age rather than size. Any log entries older than 1 month are automatically purged, naturally capping how long your boot list can grow.)
+
+_______________________________________________________________________________________________________________________________________________
+Disk and Memory Consuming Formula:
+    1. The Disk Capacity Formula (The Cap)
+        - 10% of the total filesystem size where the directory resides. 
+        - An absolute hard ceiling of 4 Gigabytes (4G).
+        
+        Example: If your root / disk partition is 20 GB, the journal will cap out at 2 GB (10%). If your partition is 100 GB, it will cap out at the maximum hard limit of 4 GB.
+
+    2. The Memory Capacity Formula (Runtime)
+        - 10% of your total system RAM size.
+        - An absolute hard ceiling of 400 Megabytes (400M).
+
+Verify:
+    [root@rhel-9 ~]# journalctl -b 0 | grep -E "System Journal|Runtime Journal"
+    Jul 27 10:00:52 localhost systemd-journald[233]: Runtime Journal (/run/log/journal/dc926a4eeec8405f8417eca98a97095e) is 4.2M, max 34.1M, 29.8M free.
+    Jul 27 10:01:05 rhel-9 systemd-journald[633]: Runtime Journal (/run/log/journal/a9a2cf5a2699432baa5a988fce4c2454) is 4.2M, max 34.1M, 29.8M free.
+    Jul 27 10:01:06 rhel-9 systemd-journald[633]: System Journal (/var/log/journal/a9a2cf5a2699432baa5a988fce4c2454) is 24.0M, max 3.3G, 3.3G free.
+ 
+    [root@rhel-9 ~]# free -m
+                total        used        free      shared  buff/cache   available
+    Mem:            1707         396        1198           4         258        1310
+    Swap:              0           0           0
+    
+    [root@rhel-9 ~]# df -h /var/log/journal/
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/sda4        34G  3.9G   30G  12% /
+    
+    (if memory is low on your system, then it can cap the runtime volatile usage to even 2%)

@@ -1,0 +1,300 @@
+Each server has its own unique name on network, in RHEL:
+    # hostname
+    # hhostnamectl
+    # cat  /etc/hostname
+    # uname -n
+    # nmcli general hostname
+
+(all above command will show the hostname assigned to server)
+-------------------------------------------------------------------------------------------------------
+We can modify it:
+    # hhostnamectl set-hostname <>
+-------------------------------------------------------------------------------------------------------
+to take effect, we can restart the deamon
+    # systemctl restart systemd-hostnamed
+-------------------------------------------------------------------------------------------------------
+To check the IP assigned to an interface on server, run:
+    # ifconfig
+
+    # ip a
+        (if we have dynamic is there, then IP is dynamically assigned)
+        - inet 192.168.139.5/24 brd 192.168.139.255 scope global dynamic noprefixroute eth1
+        (if dynamic is missing then its a static IP)
+
+    # ip a s (will show the card information)
+
+    # ip addr OR ip -o -4 addr
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: eth0    inet 192.168.0.128/24 brd 192.168.0.255 scope global dynamic noprefixroute eth0\       valid_lft 53720sec preferred_lft 53720sec
+        3: eth1    inet 192.168.139.5/24 brd 192.168.139.255 scope global dynamic noprefixroute eth1\       valid_lft 563sec preferred_lft 563sec
+
+    # ip link
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+        2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+            link/ether 08:00:27:6e:11:22 brd ff:ff:ff:ff:ff:ff
+            altname enp0s3
+        3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+            link/ether 08:00:27:f6:2e:3b brd ff:ff:ff:ff:ff:ff
+            altname enp0s8
+
+    # ip -s link
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            RX:  bytes packets errors dropped  missed   mcast
+                8408      75      0       0       0       0
+            TX:  bytes packets errors dropped carrier collsns
+                8408      75      0       0       0       0
+        2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+            link/ether 08:00:27:6e:11:22 brd ff:ff:ff:ff:ff:ff
+            RX:  bytes packets errors dropped  missed   mcast
+            813801302  593222      0       0       0       0
+            TX:  bytes packets errors dropped carrier collsns
+            25493391  324192      0       0       0       0
+            altname enp0s3
+        3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+            link/ether 08:00:27:f6:2e:3b brd ff:ff:ff:ff:ff:ff
+            RX:  bytes packets errors dropped  missed   mcast
+            3737090   46822      0       0       0       0
+            TX:  bytes packets errors dropped carrier collsns
+            12759009   68405      0       0       0       0
+            altname enp0s8
+
+    # ip -br a (will list all interface with IP)
+    # ip -j a ( in json format, usefull for AI call)
+    # ip -j -p a (parsed to jq for human readable)
+    
+-------------------------------------------------------------------------------------------------------
+To set the IP address:
+    # ifconfig <interface_name> <IP> netmask <>
+    OR
+    # ip addr add <IP/NETMASK> dev <interface_name>
+
+-------------------------------------------------------------------------------------------------------
+to check the mac address table or routing table:
+Both commands show the ARP (Address Resolution Protocol) cache — the mapping between IP addresses and MAC addresses on your local network. This is how your machine knows which hardware address to send packets to on the same network segment.
+
+    # arp -n 
+    [root@rhel-9 local-repo]# arp -n
+    Address                  HWtype  HWaddress           Flags Mask            Iface
+    192.168.139.1            ether   0a:00:27:00:00:05   C                     eth1
+    10.51.167.97                     (incomplete)                              eth0
+    192.168.139.2            ether   08:00:27:70:2a:7f   C                     eth1
+    192.168.0.1              ether   04:95:e6:22:36:50   C                     eth0
+
+    Column	        Meaning
+    Address	IP      address of the neighbor
+    HWtype	        Hardware type (ether = Ethernet)
+    HWaddress	    MAC address (hardware address)
+    Flags	        Status flags (C = Complete/Valid)
+    Iface	        Network interface this entry belongs to
+
+    OR
+
+    [root@rhel-9 local-repo]# ip neigh
+    192.168.139.1 dev eth1 lladdr 0a:00:27:00:00:05 REACHABLE
+    10.51.167.97 dev eth0 FAILED
+    192.168.139.2 dev eth1 lladdr 08:00:27:70:2a:7f STALE
+    192.168.0.1 dev eth0 lladdr 04:95:e6:22:36:50 REACHABLE
+
+    Column	        Meaning
+    IP	            Neighbor IP address
+    dev	            Interface
+    lladdr	        Link-layer (MAC) address
+    State	        Current connection state (most important column)
+
+    ARP Neighbor States Explained
+    State	    Meaning	                        Can Send Packets?	        Action Taken
+    REACHABLE	Recently confirmed	            ✅ Yes	                Use immediately
+    STALE	    Old but not expired	            ✅ Yes (will refresh)	Use, then refresh
+    DELAY	    Waiting for confirmation	    ✅ Yes	                Short delay before refresh
+    PROBE	    Actively refreshing	            ✅ Yes	                Sending ARP probes
+    FAILED	    Resolution failed	            ❌ No	                Cannot reach this neighbor
+    INCOMPLETE	ARP request sent, no reply	    ❌ No	                Waiting for reply
+    NOARP	    No ARP needed	                ✅ Yes	                Special cases
+
+-------------------------------------------------------------------------------------------------------
+to check the all listening and non-listening sockers, along with program to which they belong to:
+    # netstat -tulpna
+        Active Internet connections (servers and established)
+        Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+        tcp        0      0 127.0.0.1:53            0.0.0.0:*               LISTEN      971/dnsmasq
+        tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      7209/sshd: /usr/sbi
+        tcp        0    208 192.168.139.5:22        192.168.139.1:61244     ESTABLISHED 21555/sshd-session:
+        tcp        0      0 192.168.139.5:22        192.168.139.1:60211     ESTABLISHED 2300/sshd-session:
+        tcp        0      0 192.168.0.109:60374     172.234.162.86:443      ESTABLISHED 1022/rhcd
+        tcp6       0      0 ::1:53                  :::*                    LISTEN      971/dnsmasq
+        tcp6       0      0 :::22                   :::*                    LISTEN      7209/sshd: /usr/sbi
+        udp        0      0 127.0.0.1:53            0.0.0.0:*                           971/dnsmasq
+        udp        0      0 192.168.139.5:68        192.168.139.2:67        ESTABLISHED 23509/NetworkManage
+        udp        0      0 192.168.0.109:68        192.168.0.1:67          ESTABLISHED 23509/NetworkManage
+        udp        0      0 127.0.0.1:323           0.0.0.0:*                           792/chronyd
+        udp6       0      0 ::1:53                  :::*                                971/dnsmasq
+        udp6       0      0 ::1:323                 :::*                                792/chronyd
+
+    OR
+
+    # ss -tupna
+        Netid      State       Recv-Q      Send-Q                Local Address:Port             Peer Address:Port       Process
+        udp        UNCONN      0           0                         127.0.0.1:53                    0.0.0.0:*           users:(("dnsmasq",pid=971,fd=4))
+        udp        ESTAB       0           0                192.168.0.128%eth0:68                192.168.0.1:67          users:(("NetworkManager",pid=938,fd=33))
+        udp        ESTAB       0           0                192.168.139.5%eth1:68              192.168.139.2:67          users:(("NetworkManager",pid=938,fd=29))
+        tcp        LISTEN      0           32                        127.0.0.1:53                    0.0.0.0:*           users:(("dnsmasq",pid=971,fd=5))
+        tcp        LISTEN      0           128                         0.0.0.0:22                    0.0.0.0:*           users:(("sshd",pid=7209,fd=7))
+
+**TCP States:
+    TCP States represent the lifecycle of a connection (from LISTEN to CLOSED).
+    LISTEN = Server waiting for connections.
+    ESTAB = Connection is active and working.
+    SYN_SENT/SYN_RECV = Connection in progress (handshake phase).
+    FIN_WAIT1/FIN_WAIT2/CLOSING/LAST_ACK = Connection closing.
+    TIME_WAIT = Connection closed, waiting for timeout (normal).
+    CLOSE_WAIT = Remote closed, but local app hasn’t (common issue).
+    UDP States are simpler:
+        UNCONN = Server waiting for datagrams.
+        ESTAB = Active UDP communication (kernel tracks it).
+
+-------------------------------------------------------------------------------------------------------
+
+To play with device:
+    # ip link set dev <interface_name> up
+    # ip link set dev <interface_name> down
+    # ip addr flush dev <interface_name>
+
+    (all these changes are temporarily)
+
+-------------------------------------------------------------------------------------------------------
+To check the route: The ip r command shows your routing table — the rules your system uses to decide where to send network packets.
+    # ip -r route
+    default via 10.51.167.97 dev eth0 proto dhcp src 10.51.167.208 metric 102
+    10.51.167.0/24 dev eth0 proto kernel scope link src 10.51.167.208 metric 102
+    192.168.139.0/24 dev eth1 proto kernel scope link src 192.168.139.5 metric 101
+
+    (if multiple routes are defined, then it will check the metric, lower the metric, higher the priority)
+
+    # ip r add default via <> ( to add the another route)
+
+    (all temporarily, in newer system, all this is managed by network manager so we can manage with nmcli command)
+
+-------------------------------------------------------------------------------------------------------
+with NMCLI Command
+
+nmcli is the command-line tool for NetworkManager on RHEL and other Linux systems. You can use it to view, create, modify, activate, and troubleshoot network connections without using the GUI. Common things you can do
+    - See network status
+        nmcli general status
+        nmcli device status
+        nmcli connection show
+    - Show IP details
+        nmcli device show eth0
+    - Bring a connection up or down
+        nmcli connection up <name>
+        nmcli connection down <name>
+    - Configure IP settings
+        Set static IP, gateway, DNS, and routes
+        Switch between DHCP and manual configuration
+    - Manage Ethernet interfaces
+        Assign IPs
+        Change auto-connect settings
+        Set interface priority and metrics
+    - roubleshoot
+        Check whether a device is connected
+        See which DNS/gateway is in use
+        Verify if a connection is active
+Useful examples
+
+- Adding a new profile/connection
+    # nmcli con add type ethernet con-name 'ens192' ifname ens192
+    # nmcli con modify "ens192" ipv4.addresses 192.168.122.49/24 ipv4.gateway 192.168.122.1 ipv4.method manual
+    # nmcli con up ens192
+
+- View Connection Details
+    # nmcli connection show eth0
+
+- Adding DNS
+    # nmcli connection modify eth0 ipv4.dns "192.168.0.1 8.8.8.8"
+
+- Adding routing
+    ** Simple static routes only then you can just add routes in the main table:
+            # nmcli con modify ens192 +ipv4.routes "192.168.122.13/32 192.168.122.1"
+            # nmcli con modify ens192 +ipv4.routes "192.168.122.14/32 192.168.122.1"
+            # nmcli con modify ens192 +ipv4.routes "192.168.122.15/32 192.168.122.254"
+            # nmcli dev reapply ens192
+
+            If rules need to apply
+            # nmcli con modify "ens192" ipv4.routing-rules "priority 200 iif ens192"
+
+    ** policy-based routing 
+        - If we need a custom routing table + rule only when you want special routing behavior such as:
+            traffic coming from a specific interface
+            traffic from a specific source IP
+            different routes for the same destination depending on policy
+
+            # /etc/iproute2/rt_tables (custom tables)
+                400 nexus-nic 
+                (This gives table 400 a friendly name. Note: the name is optional. Linux can use table 400 even without a name, but naming it makes troubleshooting easier.)
+
+            # nmcli con modify ens192 +ipv4.routes "192.168.122.13/32 192.168.122.1 table=400"
+            # nmcli con modify ens192 +ipv4.routes "192.168.122.14/32 192.168.122.1 table=400"
+            # nmcli con modify ens192 +ipv4.routes "192.168.122.15/32 192.168.122.1 table=400"
+                (This puts those routes into routing table 400, not the main table.)
+
+            # nmcli con modify ens192 ipv4.routing-rules "priority 100 iif ens192 table 400"
+            (Add a routing rule: This is the part that decides when table 400 should be used.)
+
+            # nmcli con reload
+            # nmcli dev reapply ens192
+
+            # ip rule list (will list custom table if any)
+            # ip route show table 400
+            # ip route show table main
+
+- change priority
+    # nmcli con modify ens192 ipv4.route-metric 100
+    # nmcli con reload
+    # nmcli dev reapply ens192
+
+___________________________________________________________________________________________________
+RHEL example with 2 NICs and policy routing
+
+Here’s a practical example using two interfaces:
+    ens192 → 192.168.122.50/24, gateway 192.168.122.1
+    ens224 → 10.10.10.50/24, gateway 10.10.10.1
+
+Assume you want:
+        traffic from 192.168.122.50 to go out via ens192
+        traffic from 10.10.10.50 to go out via ens224
+        keep the routes separated using custom tables
+
+What to put in /etc/iproute2/rt_tables
+        100 ens192_table
+        200 ens224_table
+
+Configure routes in each table
+        nmcli con modify ens192 +ipv4.routes "default via 192.168.122.1 table=100"
+        nmcli con modify ens192 +ipv4.routes "192.168.122.0/24 dev ens192 table=100"
+
+        nmcli con modify ens224 +ipv4.routes "default via 10.10.10.1 table=200"
+        nmcli con modify ens224 +ipv4.routes "10.10.10.0/24 dev ens224 table=200"
+
+Add routing rules
+        nmcli con modify ens192 ipv4.routing-rules "priority 100 from 192.168.122.50/32 table 100"
+        nmcli con modify ens224 ipv4.routing-rules "priority 200 from 10.10.10.50/32 table 200"
+
+Apply the changes
+        nmcli dev reapply ens192
+        nmcli dev reapply ens224
+    if needed:
+        nmcli con down ens192
+        nmcli con up ens192
+        nmcli con down ens224
+        nmcli con up ens224
+
+Verify
+        ip rule list
+        ip route show table 100
+        ip route show table 200
+        ip route show table main
+
+When to use iif
+    Use iif ens192 only if you want packets arriving on ens192 to use a specific table:
+        nmcli con modify ens192 ipv4.routing-rules "priority 150 iif ens192 table 100" 

@@ -1,0 +1,209 @@
+A systemd timer unit file (ending in .timer) is a configuration file used to schedule and automate tasks in Linux systemd/Timers. It acts as a modern, native replacement for traditional cron jobs. Rather than executing code directly, a timer unit monitors time events and activates a matching .service file when specific conditions are met.
+
+Types of Timers
+    Inside a timer's [Timer] configuration block, scheduling is split into two behaviors systemd/Timers:
+        1) Monotonic Timers: Trigger relative to varying starting events like system boot or service activation systemd/Timers.
+            - OnBootSec=15min (Runs 15 minutes after system startup) Managing temporary files with systemd-tmpfiles.
+            - OnUnitActiveSec=1d (Runs again exactly 24 hours after the service was last triggered)
+        2) Realtime (Wall-Clock) Timers: Trigger on concrete calendar events, exactly like cron systemd/Timers.
+            - OnCalendar=weekly (Runs every Sunday at midnight).
+            - OnCalendar=*-*-* 03:00:00 (Runs every single day at 3:00 AM).
+
+How It Works (The 1:1 Relationship)
+    For every .timer file, there is a paired .service file with the exact same name prefix Managing temporary files with systemd-tmpfiles on RHEL. 
+        - systemd-tmpfiles-clean.timer: The clock that tracks when to execute Managing temporary files with systemd-tmpfiles.
+        - systemd-tmpfiles-clean.service: The worker that dictates what command actually runs (in this case, executing systemd-tmpfiles --clean to wipe stale temporary data) Practical systemd-tmpfiles Cleanup Policies for /tmp, `/var/tmp`, and App Caches.
+
+How systemd-tmpfiles work
+    Once a Red Hat-like system boots up, a special unit file is executed: systemd-tmpfiles-setup, this unit will execute the systemd-tmpfile --create --remove command.
+        # systemctl status systemd-tmpfiles-setup
+
+    Scheduled cleaning
+        The systemd-tmpfile service execution, at boot time, will ensure that all the required temporary directories are created --- but what about any scheduled clean up?
+        Systemd gives you the timer unit for controlling scheduled and cyclic actions to be performed in the running system.
+        You can inspect the behaviour of the timer unit by querying the systemd daemon:
+            # systemctl status systemd-tmpfiles-clean.timer
+            As you'll find on the timer unit, it will run just 15 minutes after systemd start, and then every 24 hours from that time onward. The command, in this case, will only affect files/directories purging/cleaning.
+
+Configuration files
+    Typically, for unix-like services, configuration files are located in different places and they have a hierarchical priority process. The configuration locations for systemd-tmpfiles service have the following order priority (Highest to lower):
+        - /etc/tmpfiles.d/*.conf
+        - /run/tmpfiles.d/*.conf
+        - /usr/lib/tmpfiles.d/*.conf
+    Supposing that a configuration file with the same name is placed under all the three configuration directories, the file with highest priority will be the one in /etc. The configuration files placed under /run are created at runtime by services/daemons to control temporary directory cleaning processes. And, as usual, configuration files under /usr/lib/* should be never edited directly because they're vendor-provided --- you should override them using this priority mechanism, placing a custom file under /etc/tmpfiles.d/*.
+
+
+    Looking at configuration file syntax, a systemd-tmpfiles configuration contains:
+
+    Type, Path, Mode, UID, GID, Age, and Arguments (Use a hyphen - to skip a column and use the system default).
+
+    For Type, we have following letters and the letter at the beginning of the line defines the action systemd should take on that path:
+        q: stands for subvolume or directory.
+            * q /tmp 1777 root root 10d
+            - Try to create a subvolume: It first attempts to create a Btrfs subvolume at that path. (Btrfs is a modern file system that supports advanced features like snapshotting. Creating /tmp as a separate subvolume is useful so temporary files aren't included when taking snapshots of the root file system).
+            - Fallback to a directory: If the underlying file system is not Btrfs (for example, if you are using XFS or ext4, which are standard on RHEL), it simply falls back to creating a standard directory. In this scenario, q behaves exactly like the d (directory) command.
+                
+        d: Create a directory if it doesn't exist. It will not touch the contents if the directory is already there.
+            * d /run/my_daemon 0755 myuser mygroup -
+            - On boot, systemd checks if /run/my_daemon exists. If not, it creates it with 0755 permissions, owned by myuser:mygroup. The - in the age column means files inside are not automatically deleted by the timer.
+
+        D: (Directory + Empty): Create a directory if it does not exist, AND wipe out all of its contents.
+            * D /var/cache/myapp_scratch 0777 root root 7d
+            - Creates the directory if it's missing. Crucially, it deletes everything inside this directory every time the system boots. It also cleans up files older than 7 days when the systemd-tmpfiles-clean timer runs during normal uptime.
+
+        f: Create a blank file if it does not exist. If the file is already there, do nothing.
+            * f /var/log/myapp.log 0644 daemon daemon -
+            - Creates an empty file at /var/log/myapp.log if it is missing. If the file already exists, systemd leaves the file and its contents completely alone.
+
+        F (File + Truncate): Create a file if it doesn't exist, or truncate (empty) it if it does. 
+            * F /run/nologin - - - -
+            - creates the boot-up warning message and overwrites whatever was there before).
+
+        z (Restore Permissions)
+            - Set the specified ownership, permissions, and SELinux context on a path, but do not touch the files inside it.
+
+        Z: Recursively set SELinux security contexts on a path.
+            * Z /opt/myapp/data - - - -
+            - It doesn't create any files or directories. Instead, it scans /opt/myapp/data and recursively restores the correct SELinux contexts based on your system's policy. The hyphens (-) tell systemd to leave the permissions, user, group, and age exactly as they are.
+
+        L (Symlink): Create a symbolic link.
+            * L /etc/os-release - - - -
+            - links to the true file inside /usr/lib/.
+
+        C (Copy): Copy a file or directory from a source to a destination.
+            * C /root/.bashrc - - - -
+            - copies the default skeleton bash configuration into the root user's home folder if it is missing.
+        
+        r (Remove): Delete a specific file or empty directory. 
+            * r /var/cache/dnf/download_lock.pid 
+            - deletes a leftover DNF lock file.
+
+        R (Remove Recursively): Delete a directory and absolutely everything inside it (like rm -rf). 
+            * R /var/tmp/dnf*/locks/* 
+            - clears out all DNF lock subdirectories.
+
+        x (Exclude): Tell the systemd-tmpfiles-clean timer to ignore this exact path. 
+            - Do not delete it, no matter how old it gets.
+
+        X (Exclude Recursively): Tell the timer to ignore this directory AND everything inside it. 
+            * X /tmp/snap-private-tmp 
+            - prevents systemd from accidentally deleting snap package structures.
+
+        *************************************************************
+
+        ! (Boot Only): This is a safety lock. It tells systemd to only run this action during the server boot process. If you manually run systemd-tmpfiles --clean on a live server, systemd will ignore any line with an !.
+            * D! /tmp/.X11-unix 
+            - empties the graphical server folder on boot, but protects it from being wiped while the server is running).
+
+        + (Force/Replace): If the destination already exists (like an old symlink or file), systemd will aggressively delete it and replace it with the one specified in the rule.
+            * L+ /etc/mtab - - - - ../proc/self/mounts
+            - If suffixed with '+', and a file already exists where the symlink is to be created, the file will be removed and be replaced by the symlink.
+
+        - (Ignore Failure): If the command fails (e.g., trying to write to a kernel file that doesn't exist on your specific hardware), systemd will ignore the error and move on without throwing a red failed warning in your logs.
+            * Hardware-Specific Kernel Tuning (w- /sys/devices/system/cpu/cpufreq/boost - - - - 1)
+            - Imagine you manage a mix of physical RHEL 9 servers and cloud VMs, and you use the exact same tmpfiles.d configuration file for all of them. You want to enable a specific CPU feature or tune a physical network adapter.
+                ** Without the - (w): If this script runs on a virtual machine that does not expose CPU frequency scaling to the guest OS, /sys/devices/system/cpu/cpufreq/boost will not exist. Systemd will throw an error, and your systemd-tmpfiles-setup.service will drop into a failed state on every boot.
+                ** With the - (w-): Systemd tries to write 1 to the file. If the file doesn't exist because it's a VM, systemd quietly skips the line and the service remains active (exited)
+
+How to Check Active tmpfiles.d Rules
+    # systemd-tmpfiles --cat-config
+        This merges and outputs every config file currently active across /usr/lib/tmpfiles.d/, /run/tmpfiles.d/, and /etc/tmpfiles.d/
+
+*********************************************************
+
+Lets create a custom config file for tmp cleanup rules:
+
+    - By default, it has:
+        # cat /usr/lib/tmpfiles.d/tmp.conf
+            q /tmp 1777 root root 10d
+            q /var/tmp 1777 root root 30d
+
+        (here, it will delete the files as per the age/time defined, like under /tmp it will delete the files older than 10 days)
+
+    - To change these rules permanently, you need to override the default configuration file. Never edit the files in /usr/lib/tmpfiles.d/ directly. System updates will overwrite your changes. Instead, you create an override file in /etc/tmpfiles.d/, which systemd prioritizes.
+        # cp /usr/lib/tmpfiles.d/tmp.conf /etc/tmpfiles.d/tmp.conf
+    
+    - Edit the age values
+        # New values
+        q /tmp 1777 root root 5d
+        q /var/tmp 1777 root root 14d
+        (You can use h for hours, d for days, w for weeks, or s for seconds. If you want to disable cleanup entirely for a directory, simply remove the age value completely.)
+
+    - Verify your configuration
+        # systemctl start systemd-tmpfiles-clean.service
+        (Note: Even when forced, this still respects the 5-day and 14-day age rules. It will only delete old files, not everything.)
+
+*************************************************************************************************    
+LAB:
+Step 1)
+[root@rhel-9 log]# systemd-tmpfiles --cat-config | grep ^q | grep -i tmp
+q /tmp 1777 root root 10d
+q /var/tmp 1777 root root 30d
+
+Step 2)
+[root@rhel-9 log]# cp /usr/lib/tmpfiles.d/tmp.conf /etc/tmpfiles.d/tmp.conf
+
+Step 3)
+Edit the file and change the value, comment the old values and save.
+# New values
+q /tmp 1777 root root 5d
+q /var/tmp 1777 root root 14d
+
+Step 4)
+It will be applied immedieatly
+[root@rhel-9 log]# systemd-tmpfiles --cat-config | grep ^q | grep -i tmp
+q /tmp 1777 root root 5d
+q /var/tmp 1777 root root 14d
+
+*************************************************************************************************
+SERVICE STATUS
+
+1) systemd-tmpfiles-setup.service
+    It will run when the system boots and it will do its job and set the status to active(exited)
+    # systemctl status systemd-tmpfiles-setup.service
+    ● systemd-tmpfiles-setup.service - Create Volatile Files and Directories
+        Loaded: loaded (/usr/lib/systemd/system/systemd-tmpfiles-setup.service; static)
+        Active: active (exited) since Fri 2026-07-24 13:18:56 IST; 2 days ago
+        Docs: man:tmpfiles.d(5)
+                man:systemd-tmpfiles(8)
+    Main PID: 729 (code=exited, status=0/SUCCESS)
+            CPU: 317ms
+
+    Jul 24 13:18:55 rhel-9 systemd[1]: Starting Create Volatile Files and Directories...
+    Jul 24 13:18:56 rhel-9 systemd[1]: Finished Create Volatile Files and Directories.
+
+2) systemctl status systemd-tmpfiles-clean.service
+    It will be inactive (dead) state beacuse it triggers by timer unit and will run as per defined time.
+    systemctl status systemd-tmpfiles-clean.service
+    ○ systemd-tmpfiles-clean.service - Cleanup of Temporary Directories
+        Loaded: loaded (/usr/lib/systemd/system/systemd-tmpfiles-clean.service; static)
+        Active: inactive (dead) since Sun 2026-07-26 13:34:12 IST; 18h ago
+    TriggeredBy: ● systemd-tmpfiles-clean.timer                                                                         <--------, check here, it is waiting
+        Docs: man:tmpfiles.d(5)
+                man:systemd-tmpfiles(8)
+    Main PID: 17251 (code=exited, status=0/SUCCESS)
+            CPU: 103ms
+
+    Jul 26 13:34:12 rhel-9 systemd[1]: Starting Cleanup of Temporary Directories...
+    Jul 26 13:34:12 rhel-9 systemd[1]: systemd-tmpfiles-clean.service: Deactivated successfully.
+    Jul 26 13:34:12 rhel-9 systemd[1]: Finished Cleanup of Temporary Directories.
+
+3) systemctl status systemd-tmpfiles-clean.timer
+    It will run once a day or defined in unit file and once it triggered, it will set the clean service active which further do his job.
+    systemctl status systemd-tmpfiles-clean.timer
+    ● systemd-tmpfiles-clean.timer - Daily Cleanup of Temporary Directories
+        Loaded: loaded (/usr/lib/systemd/system/systemd-tmpfiles-clean.timer; static)
+        Active: active (waiting) since Fri 2026-07-24 13:18:56 IST; 2 days ago
+        Until: Fri 2026-07-24 13:18:56 IST; 2 days ago
+        Trigger: Mon 2026-07-27 13:34:12 IST; 5h 54min left
+    Triggers: ● systemd-tmpfiles-clean.service
+        Docs: man:tmpfiles.d(5)
+                man:systemd-tmpfiles(8)
+
+    Jul 24 13:18:56 rhel-9 systemd[1]: Started Daily Cleanup of Temporary Directories.
+
+
+
+            
+
+        

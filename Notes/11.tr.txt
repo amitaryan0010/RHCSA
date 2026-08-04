@@ -1,0 +1,32 @@
+tr — Translate/Delete Characters
+tr works on characters, not words or fields. It reads from stdin only (not files directly).
+
+Basic Syntax:   # tr [options] SET1 [SET2]
+
+Examples
+1: Convert lowercase to uppercase
+    # echo "hello world" | tr 'a-z' 'A-Z'
+
+2: Convert uppercase to lowercase
+    # echo "HELLO WORLD" | tr 'A-Z' 'a-z'
+
+3: Delete specific characters
+    # echo "Hello 123 World 456" | tr -d '0-9'
+
+4: Delete spaces
+    # echo "  Hello   World  " | tr -d ' '
+
+Squeeze repeated characters
+    # echo "Hello     World" | tr -s ' '
+
+6: Replace newlines with spaces
+    # cat file.txt | tr '\n' ' '
+
+7: Replace colon with newline
+    # echo "CPU:80% Mem:60% Disk:90%" | tr ':' '\n'
+
+8: Remove punctuation
+    # echo "Hello, World! How are you?" | tr -d '[:punct:]'
+
+9: Count characters
+    # echo "hello" | tr -d '\n' | wc -c

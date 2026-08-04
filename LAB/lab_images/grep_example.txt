@@ -1,0 +1,37 @@
+ERROR: satrex failed to start at 2026-07-10 10:00:00
+warning: Disk space low on server1
+Info: User satrex logged in from 192.168.1.10
+sAtReX connected to server2000
+failed to save file: permission denied
+server1: connection closed by remote host
+Backup completed successfully at 03:00
+User: admin, Action: reboot, Reason: maintenance
+123.45.67.89 - request completed in 120ms
+alpha beta gamma delta
+sat rex satrex satrex
+server-01.example.com
+prod-db-01
+NOTE: do not interrupt process
+error (should not match as whole line)
+exact match line
+The quick brown fox jumps over the lazy dog
+server start
+abc123
+Color colour colou r colouar
+match-this-pattern
+user1 user2 user3
+Login failed for user root
+LOGIN FAILED for user ROOT
+Service started successfully
+satrex@server1:~$ ls -la
+[INFO] Process completed in 5 seconds
+[WARN] Possible configuration issue
+temporary-file.tmp
+This line contains numbers 98765 and letters
+hostA hostB hostC hostD
+Do not shutdown the server now
+System will shutdown in 5 minutes. Save your work!
+shutdown -h +5 "Planned maintenance"
+user_blocked: true
+user_blocked: false
+emptyline_following_below

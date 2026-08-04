@@ -1,0 +1,157 @@
+** sudoers is a configuration file that controls who can run what commands with sudo.
+
+sudoers.d is a directory that holds additional sudoers configuration files.
+
+** Why separate files?
+    Instead of editing one large /etc/sudoers file, you can create individual files for different users or groups.
+    Easier to manage: each application/team gets their own file.
+    Safer: you can remove one file without touching the main sudoers file.
+
+** visudo is a safe editor for sudoers files.
+    Why not just use nano or vi?
+        visudo validates syntax before saving
+        If you make a mistake, it asks if you want to keep editing or discard changes
+        It prevents lock-out by checking the file is correct before writing it
+        Usage:
+            visudo                    # Edit /etc/sudoers
+            visudo -f /etc/sudoers.d/myfile   # Edit a specific sudoers.d file
+
+    visudo -c — Syntax Check
+        -c stands for check mode. It validates the syntax of sudoers files without opening an editor.
+    Usage:
+        visudo -c                 # Check /etc/sudoers syntax
+        visudo -c -f /etc/sudoers.d/myfile   # Check a specific file
+    output:
+        /etc/sudoers: parsed OK
+
+############################################
+Common sudoers Rules
+    - Allow a user to run all commands without password
+        # john ALL=(ALL) NOPASSWD: ALL
+
+    - Allow a group to run specific commands
+        # %wheel ALL=(ALL) ALL
+
+    - Allow a user to restart Apache without password
+        # maria ALL=(ALL) NOPASSWD: /usr/sbin/systemctl restart apache2
+
+    - Allow a user to run commands as a different user
+        # bob ALL=(postgres) ALL
+        (bob can run commands as the postgres user)
+
+    - Allow sudo without password for specific command only
+        # username ALL = (ALL) NOPASSWD: /path/to/command
+
+##########################################################
+Sudoers File: User, Host Alias, Command Alias
+
+1) User Alias
+    A User Alias groups multiple users together.
+    Syntax:
+        # User_Alias ALIAS_NAME = user1, user2, user3
+    Example: Create a DEVELOPERS user alias
+        User_Alias DEVELOPERS = john, maria, alex, bob
+        (Now instead of listing each user individually, you can use DEVELOPERS.)
+
+2) Host Alias
+    A Host Alias groups multiple hosts/servers together.
+    Syntax:
+        # Host_Alias ALIAS_NAME = host1, host2, host3
+    Example: Create host aliases
+        Host_Alias WEBSERVERS = web1.example.com, web2.example.com, web3.example.com
+        Host_Alias DBSERVERS = db1.example.com, db2.example.com
+        Host_Alias PRODUCTION = web1.example.com, db1.example.com
+
+3) Command Alias
+    A Command Alias groups multiple commands together.
+    Syntax:
+        # Cmnd_Alias ALIAS_NAME = /path/to/cmd1, /path/to/cmd2, /path/to/cmd3
+    Example: Create command aliases
+        # System administration commands
+        Cmnd_Alias SYSADMIN = /usr/bin/systemctl, /usr/sbin/useradd, /usr/sbin/userdel, /usr/sbin/passwd
+
+        # Database commands
+        Cmnd_Alias DBADMIN = /usr/bin/mysql, /usr/bin/psql, /usr/sbin/mysqld_safe
+
+        # Docker commands
+        Cmnd_Alias DOCKER = /usr/bin/docker, /usr/bin/docker-compose
+
+        # Package management
+        Cmnd_Alias PKGMGMT = /usr/bin/yum, /usr/bin/apt-get, /usr/bin/dnf
+
+        # Networking
+        Cmnd_Alias NETWORK = /usr/bin/ip, /usr/sbin/iptables, /usr/bin/ping
+
+4) Advanced: Runas Alias (Run As User)
+    You can also create Runas Aliases to specify which users a command can run as:
+        Runas_Alias DBUSER = mysql, postgres, mongodb
+        Runas_Alias WEBUSER = apache, www-data, nginx
+
+        # Allow developers to run commands as database users
+        DEVELOPERS RHEL_DEV=(DBUSER) /usr/local/bin/dbscript.sh
+
+###############################################################
+Complete Real-World Example
+
+# ============ USER ALIASES ============
+User_Alias DEVELOPERS = john, maria, alex
+User_Alias SYSADMINS = root, admin, ops
+User_Alias DEVOPS = jenkins, deploy, automation
+
+# ============ HOST ALIASES ============
+Host_Alias WEBSERVERS = web1.example.com, web2.example.com, web3.example.com
+Host_Alias DBSERVERS = db1.example.com, db2.example.com
+Host_Alias ALLSERVERS = WEBSERVERS, DBSERVERS
+Host_Alias LOCALHOST = localhost, 127.0.0.1
+
+# ============ COMMAND ALIASES ============
+Cmnd_Alias SYSADMIN = /usr/bin/systemctl, /usr/sbin/useradd, /usr/sbin/userdel, /usr/sbin/visudo
+Cmnd_Alias DOCKER = /usr/bin/docker, /usr/bin/docker-compose
+Cmnd_Alias DEPLOY = /usr/local/bin/deploy.sh, /usr/local/bin/rollback.sh
+Cmnd_Alias RESTART_SERVICES = /usr/bin/systemctl restart apache2, /usr/bin/systemctl restart mysql
+
+# ============ SUDO RULES ============
+# Allow developers to run docker commands without password
+DEVELOPERS WEBSERVERS=(ALL) NOPASSWD: DOCKER
+
+# Allow devops to deploy without password
+DEVOPS ALLSERVERS=(ALL) NOPASSWD: DEPLOY
+
+# Allow sysadmins full access everywhere
+SYSADMINS ALLSERVERS=(ALL) ALL
+
+# Allow developers to restart services on web servers with password
+DEVELOPERS WEBSERVERS=(ALL) Restart_SERVICES
+
+# Allow jenkins user to run system admin commands on all servers
+devops ALLSERVERS=(root) NOPASSWD: SYSADMIN
+
+###############################################################################
+Defaults Directive
+------------------------
+
+Defaults use_pty              				# Run commands in pseudo-terminal
+Defaults log_host             				# Log hostname in sudoers log
+Defaults requiretty           				# User must be in TTY
+Defaults lecture = "once"     				# Show lecture only once
+Defaults env_reset            				# Reset environment variables
+Defaults env_keep = "LANG LC_ALL"  			# Keep specific env vars
+Defaults env_keep += "CUSTOM_VAR"           # Add new env variables
+Defaults env_delete = "SUDO_*,PROXY*"       # Remove specific env variables from being passed
+Defaults env_keep = "JAVA_HOME MAVEN_HOME"  # Example: Preserve Java home for build tools
+Defaults syslog = "authpriv"                # Log sudo commands to syslog
+Defaults logfile = "/var/log/sudo.log"      # Specify log file path
+Defaults   !visiblepw                       # no password visible while typing
+Defaults:ansibleuser    visiblepw, pwfeedback   # *** will be printed when ansibleuser will type the sudo password
+
+
+
+Types of Defaults:
+Type					Scope						Example
+Defaults				Global (all users)			Defaults use_pty
+Defaults@hostname		Host-specific				Defaults@webserver use_pty
+Defaults:user			User-specific				Defaults:john requiretty
+Defaults:group			Group-specific				Defaults:%sudo log_output
+Defaults>runasuser		Run-as user specific		Defaults>root log_input
+Defaults!command		Command-specific			Defaults!find requiretty
+

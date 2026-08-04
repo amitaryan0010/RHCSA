@@ -1,0 +1,90 @@
+The newgrp command temporarily changes your current primary group for your active terminal session without requiring you to log out or reboot.When you run newgrp, Linux initializes a brand-new sub-shell where the group you specified becomes your default primary group. Any new files or directories you create from that exact terminal window will immediately be owned by this new group.
+
+###############################################################
+
+Why Use newgrp?
+- Instant Session Refresh: It updates your group memberships immediately if a system administrator just added you to a new group. You don't have to close your SSH session or log out.
+- Switching Primary Identity: If you belong to multiple projects (e.g., dev and finance), you can flip between them so your files are automatically created with the correct group ownership depending on what task you are working on.
+
+################################################################
+# 1. Check current identity
+[ansibleuser@rhel-9 ~]$ id -gn
+ansibleuser
+
+# 2. Create a file (gets the default primary group)
+[ansibleuser@rhel-9 ~]$ touch file1.txt
+[ansibleuser@rhel-9 ~]$ ll file1.txt
+-rw-r--r--. 1 ansibleuser ansibleuser 0 Jul 16 13:20 file1.txt
+
+# 3. Switch your active primary group to 'shared'
+[ansibleuser@rhel-9 ~]$ newgrp shared
+
+# 4. Check identity again (it changed!)
+[ansibleuser@rhel-9 ~]$ id -gn
+shared
+
+# 5. Create a new file (it automatically gets the 'shared' group)
+[ansibleuser@rhel-9 ~]$ touch file2.txt
+[ansibleuser@rhel-9 ~]$ ll file2.txt
+-rw-r--r--. 1 ansibleuser shared      0 Jul 16 13:21 file2.txt
+
+##################################################################
+
+How to Go Back
+    Because newgrp opens a new shell layered on top of your old one, returning to your original setup is incredibly simple. Just type exit:
+
+    [ansibleuser@rhel-9 ~]$ exit
+    [ansibleuser@rhel-9 ~]$ id -gn
+    ansibleuser
+
+###################################################################
+
+How Passwords Work with newgrp:
+    If you try to run newgrp to switch to a group that you are not officially a member of, Linux checks the /etc/gshadow file to see if that group has a password configured.Depending on the setup, one of two things will happen:
+    
+    Scenario A: The Group Has a Password Set
+        If a root administrator has set a password for that group, the terminal will prompt you for it. If you enter the correct group password, Linux temporarily validates you and logs you into that group's sub-shell anyway.
+
+        [ansibleuser@rhel-9 ~]$ newgrp restricted_dept
+        Password: <--- Type the group password here
+        [ansibleuser@rhel-9 ~]$ id -gn
+        restricted_dept
+
+    Scenario B: The Group Has NO Password Set (Default Behavior)
+        Most modern Linux distributions do not configure group passwords by default. If a group has no password set and you are not listed as a member, the system will flatly deny you access.
+
+        [ansibleuser@rhel-9 ~]$ newgrp restricted_dept
+        newgrp: Permission denied.
+
+######################################################################
+
+How Administrators Manage Group Passwords
+    System administrators use the gpasswd utility to manage these passwords and group administrators:
+    # Set a group password: sudo gpasswd groupname
+    # Remove a group password: sudo gpasswd -r groupname
+
+########################################################################
+
+Using the sg (Switch Group) Command
+    The sg command acts exactly like newgrp, but it allows you to execute a single command as a different group and instantly drops you back to your regular shell. This saves you from having to type newgrp and then exit.
+    # sg [group_name] "-c '[command]'"
+
+    ExampleI:
+        magine you want to copy a file directly into a directory owned by the shared group, but you do not want to switch your entire shell environment over. You can execute just the cp or touch command under that group identity:
+
+    # 1. Verify your standard primary identity
+    [ansibleuser@rhel-9 ~]$ id -gn
+    ansibleuser
+
+    # 2. Run a command explicitly using the 'shared' group identity
+    [ansibleuser@rhel-9 ~]$ sg shared -c "touch /opt/bit/sg_test_file"
+
+    # 3. Verify the file was created with the target group ownership
+    [ansibleuser@rhel-9 ~]$ ls -l /opt/bit/sg_test_file
+    -rw-r--r--. 1 ansibleuser shared 0 Jul 16 13:25 /opt/bit/sg_test_file
+
+    # 4. Check your shell—it never changed!
+    [ansibleuser@rhel-9 ~]$ id -gn
+    ansibleuser
+
+########################################################################

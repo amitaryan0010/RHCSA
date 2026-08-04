@@ -1,0 +1,31 @@
+✅  Files are identified with inode (index nodes)
+    - It tracks the metadata of the file except file name.
+    - inode tracks:
+        - ownership
+        - permission
+        - data and time stamps
+        - paths to data block containing actual data
+    - File allocation table keeps the file name and associated inode to that file.
+
+👉 If file system types is xfs then inode size is 512 bytes per file.
+
+👉 checking the inode of a file.
+    # ls -li <directory/file_name>
+
+👉 Links the file and directory
+
+In Linux, links are "shortcuts" to files, but they work very differently under the hood. To understand them, remember that a filename is just a label pointing to an Inode (the actual data's ID on the disk).
+    
+- Hard Link
+    - A hard link is a mirror image of the original file. It points directly to the same Inode (data) as the original. 
+    - Behavior: If you delete the original file, the data stays alive until the last hard link is deleted. They are indistinguishable from the original file.
+    - Cross-Device: Cannot link files on different disks/partitions (because Inodes are unique to each disk).
+    - Directories: Generally cannot link directories (to prevent system loops).
+    - Command: ln /path/to/original link_name
+
+- Soft Link (Symbolic Link / Symlink)
+    - This is like a Windows shortcut. It is a small file that contains the text path of another file. 
+    - Behavior: If you delete the original file, the soft link "breaks" (it points to nothing).
+    - Cross-Device: Can point to files on different disks or partitions.
+    - Directories: Can link to both files and directories.
+    - Command: ln -s /path/to/original link_name 
