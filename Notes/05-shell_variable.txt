@@ -13,15 +13,15 @@
 - HISTTIMEFORMAT='%F %T ' (to save the time of that command when it was ran)
 - LESS='-X', export this and help you to prevent the output from screen with less command
 
-- we can create the alias in file for any command. for example: sc="grep ^[^#] $1" (it will display the only uncommented line from a file which is being passed to 'sc' as first argument, like #sc /etc/fstab)
+- we can create the alias in file for any command. for example: myc="grep ^[^#] $1" (it will display the only uncommented line from a file which is being passed to 'myc' as first argument, like #myc /etc/fstab)
 ** to disaply the all 'alias' is being used in current shell, run # alias and will display the all alias is being set.
 
 - We can create the function as well, group of command with one single alias
 for example:
-mcd() {
+mycd() {
     mkdir -pv $1 && cd $1
 }
-(here mcd is a function and it will get the first argument as input and create the directory with that name and then change the current working directory to that)
+(here mycd is a function and it will get the first argument as input and create the directory with that name and then change the current working directory to that)
 
 - We can set the default editor to edit the file.
 for example: set inside the file as:
