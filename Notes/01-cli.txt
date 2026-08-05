@@ -70,7 +70,7 @@
     - Ctrl+e: Move cursor to the end of the line.
     - Ctrl+u: Erase from cursor to the beginning of the line.
     - Ctrl+k: Erase from cursor to the end of the line.
-    - ctrl+w: Erase teh precding word
+    - ctrl+w: Erase the preceding word
     - ctrl+y: Paste erased text
     - ctrl+<left_arrow>: jump to the beginning of the previous word
     - ctrl+<right_arrow>: jump to the beginning of the next word
