@@ -1,0 +1,68 @@
+✅ User and Group
+    👤 1. Types of Users in Linux
+        - Root User (UID 0): The superuser or system administrator with unrestricted access to all files and commands.
+        - System Users: Accounts created automatically by the OS to run specific services and background daemons (e.g., apache, nginx, mysql). They usually cannot log in interactively.- - Regular Users: Standard accounts created for actual humans to perform daily tasks, with restricted access to system-wide configuration files.
+        
+    👥 2. Types of Groups in Linux
+        - Primary Group: Every user belongs to exactly one primary group (usually created with the exact same name as the user). Any file that the user creates is automatically owned by this group.
+        - Secondary (Supplementary) Groups: Groups a user is added to later to grant them additional permissions (e.g., adding a regular user to the wheel or sudo group to grant them administrative privileges).
+        
+    🗃️ 3. Critical Configuration Files
+        The Linux OS tracks identity and membership through plain-text database files:
+            - /etc/passwd: Stores core user account information.
+                Format: username:x:UID:GID:Comment:Home_Directory:Login_Shell
+            - /etc/shadow: Stores heavily encrypted user passwords and expiration rules.
+            - /etc/group: Tracks group definitions and list of members.
+                Format: group_name:x:GID:comma_separated_user_list
+                
+    🛠️ 4. Essential Management Commands
+        Creating and Modifying Users
+            - useradd <username>: Creates a brand new regular user account.
+            - passwd <username>: Assigns or updates a secure password for a user.
+            - usermod -aG <group> <username>: Appends (-a) a user into a secondary (-G) group without removing them from their existing groups.
+            - userdel -r <username>: Deletes a user account along with their entire home directory structure (-r).
+        
+        Creating and Modifying Groups
+            - groupadd <group_name>: Provisions a brand new security group.
+            - groupdel <group_name>: Safely deletes a group from the system configuration.
+            Verifying Identity
+            - id <username>: Displays the exact User ID (UID), Primary Group ID (GID), and all associated group memberships.
+            - whoami: Displays the username of the account currently driving the terminal.
+    
+    🛡️ 5. Interaction with File Permissions
+        Every file and directory on a Linux filesystem assigns standard Read (r), Write (w), and Execute (x) bits to three distinct tiers:
+            - User: The individual account that owns the file.
+            - Group: The group that owns the file.
+            - Others: Every other user account on the entire system
+
+✅  Files are identified with inode (index nodes)
+    - It tracks the metadata of the file except file name.
+    - inode tracks:
+        - ownership
+        - permission
+        - data and time stamps
+        - paths to data block containing actual data
+    - File allocation table keeps the file name and associated inode to that file.
+
+👉 If file system types is xfs then inode size is 512 bytes per file.
+
+👉 checking the inode of a file.
+    # ls -li <directory/file_name>
+
+👉 Links the file and directory
+
+In Linux, links are "shortcuts" to files, but they work very differently under the hood. To understand them, remember that a filename is just a label pointing to an Inode (the actual data's ID on the disk).
+    
+- Hard Link
+    - A hard link is a mirror image of the original file. It points directly to the same Inode (data) as the original. 
+    - Behavior: If you delete the original file, the data stays alive until the last hard link is deleted. They are indistinguishable from the original file.
+    - Cross-Device: Cannot link files on different disks/partitions (because Inodes are unique to each disk).
+    - Directories: Generally cannot link directories (to prevent system loops).
+    - Command: ln /path/to/original link_name
+
+- Soft Link (Symbolic Link / Symlink)
+    - This is like a Windows shortcut. It is a small file that contains the text path of another file. 
+    - Behavior: If you delete the original file, the soft link "breaks" (it points to nothing).
+    - Cross-Device: Can point to files on different disks or partitions.
+    - Directories: Can link to both files and directories.
+    - Command: ln -s /path/to/original link_name 
