@@ -80,7 +80,7 @@
 
 👉 Persistent Configuration: If you run firewall-cmd --permanent --add-port=80/tcp, the change is written to the disk (Persistent). It won't take effect until you reload, but it will survive a reboot.
 
-👉 The path of a file or directory specifies its unique file system location. In Linux, we have two paths:
+👉 The path of a file or directory specifies it is unique file system location. In Linux, we have two paths:
 1. Absolute Path:
     - An absolute path is the complete address of a file or directory.
     - Starts with: A forward slash / (the root).
