@@ -54,7 +54,7 @@
 **Visual block mode
 - press 'ctrl+v' to select the data visually vertically, like we do in word with 'Alt' key and then you can delete those vertically selected data with del key or x key.
 
-- to get the indentation towards right side, then you can select the data with 'shift+v' and then press '>' key to shift the data towards right.
+- to get the indentation towards right side, then you can select the data with 'shift+v' and then press 'shift+ >' key to shift the data towards right.
 
 👉 To save and exit from the file
 - from extended command mode: press ':wq'
