@@ -1,11 +1,11 @@
 ✅ Editing text file from shell with VIM Editor
-👉 vim is a vi-improved version os vi editor and can be get by installing this package 'vim-enhanced'
+👉 vim is a vi-improved version of vi editor and can be get by installing this package 'vim-enhanced'
 
 👉 Basic shorthands to run quickly inside vim
 
-- When we run he vim,it will open in default command mode.
+- When we run the vim, it will open in default command mode.
 - To write something, you need to go to insert mode so press 'i' to get into insert mode.
-- After writing the data, we need extended command mode and you can press ':' (colon) on keyboard to get into extended command mode and then you can save it with 'w' button.
+- After writing the data, we need extended command mode and you can press ':' (colon) on keyboard to get into extended command mode and then you can save it with ':w' button.
 - type ':q' to quit from the file.
 - We can use ':wq' at same time to save and exit from the file at sametime.
 
@@ -14,8 +14,8 @@
 👉 Additonal shrothands inside default command mode
 - press 'y' to copy the entire line
 (it will copy/cut/paste/delete on the line where cursor is present)
-- pres 'yw' to copy the single word where the current cusror.
-- If we want to paste few lines at a particular line in same file then we can use lines_to_copy,t<new_lines> (let say, we want to copy from line 2 to 4 and paster into line 9 then we can run in command mode- :2,4t9, hit enter, it will copy the line 2 to 4 and paste them to line 9)
+- press 'yw' to copy the single word where the current cusror.
+- If we want to paste few lines at a particular line in same file then we can use lines_to_copy,t<new_lines> (let say, we want to copy from line 2 to 4 and paste into line 9 then we can run in command mode- :2,4t9, hit enter, it will copy the line 2 to 4 and paste them to line 9)
 - press 'p' to paste the copied line
 - If wanted to paste mulitple times, then press number let say 3 and then 'p', so it will paste the line 3 times.
 - press 'a' to append the text after the current cursor position
@@ -54,7 +54,7 @@
 **Visual block mode
 - press 'ctrl+v' to select the data visually vertically, like we do in word with 'Alt' key and then you can delete those vertically selected data with del key or x key.
 
-- to get the indedation towards right side, then you can select the data with 'shift+v' and then press '>' key to shift the data towards right.
+- to get the indentation towards right side, then you can select the data with 'shift+v' and then press '>' key to shift the data towards right.
 
 👉 To save and exit from the file
 - from extended command mode: press ':wq'
@@ -89,7 +89,7 @@ set nu
     :%s/<old_word>/<new_word>/gc (here, c is for confirmation before each replace it will ask for confirmation)
 
 👉 Copy the content from another file to one file while reading
-- Take the cusror to the line where we want to append or add the content from antoher file then go to command mode and type 'r' and path_of_file to insert
+- Take the cusror to the line where we want to append or add the content from another file then go to command mode and type 'r' and path_of_file to insert
     :r /etc/passwd (hit enter, it will add the content from passwd file to current file)
 
     If we want to add the content at a specific line then we can mention the line number before r
@@ -104,7 +104,7 @@ set nu
 
     We can open the new file from current vim opened file then in command mode, ':edit <new_file_name>' it will open the new file at same location.
 
-    We can split our screen as well horozontly then in command mode, ':split <another file name>' it will open the both files at same time, to switch from window use 'ctrl + w' and then J to go to below window which will switch your cursor from one window to another window.
+    We can split our screen as well horizontly then in command mode, ':split <another file name>' it will open the both files at same time, to switch from window use 'ctrl + w' and then J to go to below window which will switch your cursor from one window to another window.
 
     Use ':vsplit' to open the files vertically.
 
