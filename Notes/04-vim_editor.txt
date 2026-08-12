@@ -93,20 +93,29 @@ set nu
     :r /etc/passwd (hit enter, it will add the content from passwd file to current file)
 
     If we want to add the content at a specific line then we can mention the line number before r
-    :5r /etc/passwd (hit enter, it will insert the all content starting from line 5)
+    :5r /etc/passwd (hit enter, it will insert the all content starting from line 5 in current file)
+    :r <file> (inserts text below the current cursor line.)
+    :0r <file> (inserts text at the very beginning of the file (above line 1))
+    :$r <file> (inserts text at the very end of the file.)
 
 👉 Opening multiple files with vim:
     We can open multiple files with vim, specify the all file names in single command, it will open all the files.
     If we want to switch to next file then in command mode, ':next' it will display the content from second file.
-    If want to go previous file, then in command mode, ':prevents' it will display the content of first file.
+    If want to go previous file, then in command mode, ':previous' it will display the content of first file.
 
     If you want to display all the opened files, then in command mode, ':args' will display all files name and current file name will be in [] square bracket.
 
     We can open the new file from current vim opened file then in command mode, ':edit <new_file_name>' it will open the new file at same location.
 
-    We can split our screen as well horizontly then in command mode, ':split <another file name>' it will open the both files at same time, to switch from window use 'ctrl + w' and then J to go to below window which will switch your cursor from one window to another window.
-
+    We can split our screen as well horizontly then in command mode, ':split <another file name>' it will open the both files at same time, 
+    
     Use ':vsplit' to open the files vertically.
+
+    To toggle:
+        - Ctrl + w then h (or Left Arrow): Move to the left pane
+        - Ctrl + w then l (or Right Arrow): Move to the right pane
+        - Ctrl + w then k (or Up Arrow): Move to the top pane
+        - Ctrl + w then j (or Down Arrow): Move to the bottom pane
 
     To close the current opened or active window, in command mode, ':close'
 
