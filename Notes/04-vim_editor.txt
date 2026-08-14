@@ -12,7 +12,7 @@
 - with ':w <path>', we can give the path as well to save the opened file at defined path.
 
 👉 Additonal shrothands inside default command mode
-- press 'y' to copy the entire line
+- press 'yy' to copy the entire line
 (it will copy/cut/paste/delete on the line where cursor is present)
 - press 'yw' to copy the single word where the current cusror.
 - If we want to paste few lines at a particular line in same file then we can use lines_to_copy,t<new_lines> (let say, we want to copy from line 2 to 4 and paste into line 9 then we can run in command mode- :2,4t9, hit enter, it will copy the line 2 to 4 and paste them to line 9)
