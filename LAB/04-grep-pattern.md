@@ -61,7 +61,7 @@ OR
 # cat grep_example.txt | grep "\bserver\b"
 ```
 * Will print all strings which has ac in it.
-![alt text](./lab_images/image-2.png)
+    ![alt text](./lab_images/image-2.png)
 
 * Will print all lines starting with server keyword 
 ![alt text](./lab_images/image-3.png)
