@@ -65,18 +65,22 @@ OR
     ![alt text](./lab_images/image-2.png)
 
 * Will print all lines starting with server keyword 
-![alt text](./lab_images/image-3.png)
+
+    ![alt text](./lab_images/image-3.png)
 
 * Will print all lines, ending with zero (0)
-![alt text](./lab_images/image-4.png)
+    
+    ![alt text](./lab_images/image-4.png)
 
 * Will print all strings which have 'lo' + zero or more 'g'
-![alt text](./lab_images/image-5.png)
+    
+    ![alt text](./lab_images/image-5.png)
 
-![alt text](./lab_images/image-8.png)
+    ![alt text](./lab_images/image-8.png)
 
 * Will print all strings which have 'er' + one or more 'r'
-![alt text](./lab_images/image-6.png)
+    
+    ![alt text](./lab_images/image-6.png)
 
 | Symbol | Meaning | Matches | Example (err* vs err+) |
 | --- | --- | --- | --- |
