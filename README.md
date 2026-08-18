@@ -1,4 +1,5 @@
-#  ![alt text](./images/redhat.png) RHCSA (A Quick Intro)
+ ![alt text](./images/redhat.png) 
+ # RHCSA (A Quick Intro)
 
 This repository is designed to help you master RHCSA (Red Hat Certified System Administrator) using RHEL 9 and RHEL 10 with:
 
