@@ -14,7 +14,7 @@
 - LESS='-X', export this and help you to prevent the output from screen with less command
 
 - we can create the alias in file for any command. for example: myc="grep ^[^#] $1" (it will display the only uncommented line from a file which is being passed to 'myc' as first argument, like #myc /etc/fstab)
-** to disaply the all 'alias' is being used in current shell, run # alias and will display the all alias is being set.
+** to display the all 'alias' is being used in current shell, run # alias and will display the all alias is being set.
 
 - We can create the function as well, group of command with one single alias
 for example:
