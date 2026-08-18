@@ -82,19 +82,19 @@ OR
 
 ![alt text](./lab_images/image-6.png)
 
-    | Symbol | Meaning | Matches | Example (err* vs err+) |
-    | --- | --- | --- | --- |
-    | * | Zero or more | 0, 1, 2, 3... | err* = e + r + zero or more r |
-    | + | One or more | 1, 2, 3... | err+ = e + r + at least one r |
+| Symbol | Meaning | Matches | Example (err* vs err+) |
+| --- | --- | --- | --- |
+| * | Zero or more | 0, 1, 2, 3... | err* = e + r + zero or more r |
+| + | One or more | 1, 2, 3... | err+ = e + r + at least one r |
 
 
-    | Word | err* matches? | err+ matches? | Reason |
-    | --- | --- | --- | --- |
-    | error | Yes | Yes | Has "err" |
-    | interrupt | Yes | Yes | Has "err" |
-    | server | Yes | No | Only has "er" (not "err") |
-    | permission | Yes | No | Only has "er" |
-    | failed | No | No | No "er" at all |
+| Word | err* matches? | err+ matches? | Reason |
+| --- | --- | --- | --- |
+| error | Yes | Yes | Has "err" |
+| interrupt | Yes | Yes | Has "err" |
+| server | Yes | No | Only has "er" (not "err") |
+| permission | Yes | No | Only has "er" |
+| failed | No | No | No "er" at all |
 
 * Will print all strings which have 'col' + 'o' + zero or one 'u' + 'r'
 ![alt text](./lab_images/image-7.png)
