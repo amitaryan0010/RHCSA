@@ -28,7 +28,7 @@ find . -name "*.txt" , -name "*.md"             # Comma – evaluate both but on
 Normal Options (Always True, Specified Early)
 find / -maxdepth 3 -name "*.conf"        # Only go 3 levels deep
 find / -mindepth 2 -name "*.log"         # Skip the top-level directory
-find / -xdev -name "*.txt"               # Don't search mounted filesystems
+find / -xdev -name "*.txt"               # Don't search network (nfs) mounted filesystems
 
 ########################################
 Tests (The Heart of find)
