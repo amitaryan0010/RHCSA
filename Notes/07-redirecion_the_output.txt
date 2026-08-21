@@ -1,0 +1,24 @@
+# Redirection the output 
+We can insert our input or command in multiple ways:
+    - stdin (standard input) via keyboard
+    - stdout (standard output) via monitor/terminal
+    - stderr (standard error) via monitor/terminal
+
+Redirection:
+    - stdin via <
+    - stdout 1> or >
+    - stderr 2>
+
+Piping the output
+    # cmd1 | cmd2
+
+
+"tee" command
+
+We can give the output of cmd1 via | (pipe) to tee commad which will display the output and redirec the output to a file as well.
+
+# hostnamectl | tee system_info.txt
+
+By default, tee command overwrite the existing content, but we can use this with append (-a) mode to append the new output.
+
+# cat /etc/resolv.conf | tee -a system_info.txt
