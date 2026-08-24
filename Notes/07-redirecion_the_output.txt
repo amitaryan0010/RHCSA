@@ -9,6 +9,11 @@ Redirection:
     - stdout 1> or >
     - stderr 2>
 
+We can redirect standard input and error both at same time using &> (to append use &>>)
+
+get the input from a file:
+    - < file_name
+
 Piping the output
     # cmd1 | cmd2
 
