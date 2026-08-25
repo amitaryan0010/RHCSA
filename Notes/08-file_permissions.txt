@@ -1,0 +1,141 @@
+In linux, we have two types of permissions:
+    - Regular permission
+    - Special permission
+
+Regular Permission:
+
+    -   ---    ---    ---
+    ┬  ──┬──  ──┬──  ──┬──
+    │    │     │     └── 3. Others (Everyone else)
+    │    │     └──────── 2. Group (Members of the file's group)
+    │    └────────────── 1. Owner/User (The person who owns the file)
+    └─────────────────── File Type (Dash = Regular file)
+
+    These 10 dashes represents 10 different strings:
+    first dash (-) defined the file types with below strings:
+    1) - Regular file like documents, images, scripts or binary files
+    2) d Directory (folders)
+    3) l symbolic links (shortcut pointing to another file)
+    4) c character device file : Represents hardware devices that send or receive data one character at a time (linear streams).Examples: Your keyboard, mouse, serial ports, or virtual terminals (e.g., /dev/tty).
+    5) b Block device file: Represents hardware devices that read or write data in large, fixed-size chunks (blocks). Unlike character devices, these can be buffered and accessed randomly.Examples: Hard drives, SSDs, or USB flash drives (e.g., /dev/sda).
+    6) p Named Pipe/FIFO: Stands for First-In, First-Out. It is a special file used to pass data between two running programs on the same computer. One process writes data into the pipe, and another reads it out.
+    7) s Network Socket: A special file used for network-like communication. It allows different programs to talk to each other, either on the same local machine or across a network.Example: System services like database servers or background daemons (e.g., Docker or SSH) use these to handle local connections.
+
+    Other dashes defines the ownership for owning user, owning group and others respectively:
+    r: read
+    w: write
+    x: execute
+
+    When we crate the file, it is in directory and top change inside the directory and to list the files or directory inside a parestn directory. We need these permissions:
+    - to change inside a directory, we need x permission
+    - to list the content, we need r permission
+    - to write or delete something, we need w permission
+
+    For files, it is little different from directories,
+    - to update the file, we need w permission
+    - to read the file, we need r permission
+    - to execute (if binary or script), we need x permission
+
+    We can use `chown` command to change the owning user or owning group or both.
+    We can user `chgrp` command to change the only group
+    We can user `chmod` command to change the permission
+
+    Permissions can be represented as octal numbers:
+    r = 4
+    w = 2
+    x = 1
+    rwx = 7
+    rw = 6
+    rx = 5
+
+    Other ways to set the permission:
+    chmod 750 file1 (-rwxr-x---)
+    or
+    chmod u+x (will set the execute permission for users only)
+    chmod a+w (will set the write permission for all Members)
+    chmod g-wx (will remove the write and execute permission from group)
+
+    We can set the permission recursive manneer on directory:
+    chmod -R 750 /dir (here, 750 will be applied to /dir and all its files or dir inside this)
+
+    chmod -R a=rwX /dir (here, we used capital X which sets the permission to rwx for all Members on /dir and all its direcotry but on files, no x execute permission will be granted, if the file has no x permission, if file has already x permission then X will apply to that file as well)
+
+
+    MOST IMPORTANT RULE:
+    If a user is owner of a file or permission that doesn't mean full permission. Linux checks if a logged in user is the owner of file/dir and apply the permission and exit, it will not check the group permission though the user is part of group as well.
+    For better understanding check the LAB number 7 for this class.
+#################################################################################
+
+Special Permission:
+
+SUID, SGID, and the Sticky Bit are special Linux file permissions that override standard access rules to handle advanced execution and file-sharing scenarios.Normally, when you run a file, it runs with your user privileges. When you create a file, it gets your primary group. These three special bits change that default behavior entirely.
+
+1. SUID (Set User ID)
+    * What it does: When an executable file with SUID is run, the process runs with the privileges of the file owner, not the user who executed it.
+    * Primary Use Case: Allowing standard users to perform specific tasks that require root privileges without giving them full root access.
+    * Real-world Example: The /usr/bin/passwd command. Standard users must be able to modify the /etc/shadow file (which is owned by root) to change their own password. SUID temporarily boosts their privileges to root for that single action.How it looks in ls -l: An s replaces the x in the user/owner column (e.g., -rwsr-xr-x).
+    * Numerical Value: 4000
+
+2. SGID (Set Group ID)
+    * SGID behaves differently depending on whether it is applied to a file or a directory.
+    
+    * On an Executable File:
+        - What it does: The program runs with the privileges of the file's group owner, rather than the user's primary group.
+        - Numerical Value: 2000
+
+    * On a Directory (The Most Common Use Case):
+        - What it does: Any new file or subdirectory created inside this folder automatically inherits the group ownership of the parent directory, rather than the primary group of the user who created it.
+        - Primary Use Case: Collaborative shared folders. It ensures that a team working in the same directory can always read and modify each other's files because they all share the same group ID.
+        - How it looks in ls -l: An s replaces the x in the group column (e.g., drwxr-sr-x).
+
+3. Sticky Bit
+    * What it does: When applied to a directory, it prevents users from deleting or renaming files inside it unless they are the explicit owner of that file or the root user.
+    * Primary Use Case: Shared public directories where everyone has write access, but you want to stop users from maliciously deleting or altering other people's data.
+    * Real-world Example: The /tmp directory. Every user on a Linux system can write temporary files there, but the Sticky Bit ensures userA cannot delete a temporary session file belonging to userB.
+    * How it looks in ls -l: A t replaces the x in the "others" column (e.g., drwxrwxrwt).
+    * Numerical Value: 1000
+
+** Quick Reference Matrix
+
+Special Permission      Octal Value     Effect on Executable File           Effect on Directory                  Appearance (ls -l)
+-----------------------------------------------------------------------------------------------------------------------------------
+    SUID                    4             Runs as the file owner                No effect                           -rws------
+    SGID                    2             Runs as the file group        New files inherit parent group              ----r-s---
+    Sticky Bit              1             No effect                     Only file owners can delete files           -------r-t
+    
+    
+----> Note: If you see a capital letter (S or T), it means the underlying execution bit (x) is missing. A lowercase letter (s or t) means the executable bit is present and active.
+
+____________________________________________________________________________________________________________________________
+
+DEMO:
+
+** SUID:
+    Lets create a show_id binary and then complie it with C (gcc) and set the suid and then run, output shows the REAL UID for the user who runs that binary and Effective UID of running as.
+
+** SGID:   
+    Lets create a show_gid binary and then complie it with C (gcc) and set the sgid and then run, output shows the REAL GID for the user who runs that binary and Effective GID of running as group.
+
+** Sticky Bit:
+    You can try to create a file with normal user under /tmp directory and then try to delete with another normal user, operation will not be permitted since sticky bit is applied at /tmp directory, only root user can delete it.
+
+## UMASK
+umask (User Mask) is a built-in shell command that acts as a permission filter for newly created files and directories. It strips away specified permissions automatically at the moment of creation to ensure your system remains secure.
+
+Without umask, every new file you create would be completely open to everyone on the system.
+
+How it Works: 
+The Default Base PermissionsWhen a program creates a new file or folder, Linux starts with a maximum "base" permission level:
+    - Directories (Base: 777): Fully open (drwxrwxrwx). Folders require execute (x) permissions just so you can open/enter them.
+    - Files (Base: 666): Open for reading and writing (-rw-rw-rw-). Linux intentionally blocks execute (x) permissions on new files by default for safety.
+    The umask value is subtracted from these base permissions to determine the final permission.
+
+If you type umask in your terminal, you will usually see a four-digit octal number (like 0022 or 0002). You can ignore the first 0 for now (it represents special sticky/SGID bits). Look at the last three digits.
+
+Standard System Default (0022)
+A umask of 0022 tells the system: "Block write permissions for the Group and Others."For a new Directory: 777 (Base) - 022 (Mask) = 755 (drwxr-xr-x)For a new File: 666 (Base) - 022 (Mask) = 644 (-rw-r--r--)
+
+Useful umask Commands
+- umask: Displays the current mask in octal format (e.g., 0022).
+- umask -S: Displays the current mask in a symbolic (human-readable) format. Instead of showing what is blocked, it shows what is allowed (e.g., u=rwx,g=rx,o=rx).
+- umask 0077: Changes your current session's mask.
