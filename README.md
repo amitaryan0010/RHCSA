@@ -6,6 +6,7 @@ This repository is designed to help you master RHCSA (Red Hat Certified System A
 - 💻 Hands-on labs
 - ⚙️ Real-world Linux administration tasks
 - 🎯 Exam-focused preparation
+- 💻 [Path4Cloud RHCSA Playlist](https://www.youtube.com/playlist?list=PL4AfI7BPFsdtFoipNVfMfrQ0mV-0XymL9)
 
 ## 🔴 What is LINUX?
 
