@@ -1,6 +1,6 @@
 Find command: as name tells, it is used to find something inside linux accross the server/file system.
 
-It has many options/flags which can manipuate the findging pattern and result.
+It has many options/flags which can manipuate the finding pattern and result.
 
 ########################################
 Symbolic Link Handling
@@ -9,7 +9,7 @@ Symbolic Link Handling
 # ├── real_dir/
 # │   └── file.txt
 # └── link_dir -> real_dir/
-
+`   
 find -P /tmp/test        # Does NOT go into link_dir
 find -L /tmp/test        # DOES go into link_dir (same as real_dir)
 find -H /tmp/test        # Follows link_dir only if it's in the initial path
@@ -175,7 +175,7 @@ Example 6: Find Files by User and Copy
 ########################################
 locate: 
     is a command-line tool in Linux that finds files by name almost instantly — much faster than find.
-    If not installed then "yum install mlocate -y" and then run "updatedb"
+    If not installed then "yum/dnf install mlocate -y" and then run "updatedb"
 
 How It Works
     Unlike find (which searches the filesystem live), locate searches a pre-built database of filenames.
