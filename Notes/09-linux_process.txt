@@ -1,3 +1,12 @@
+A process is a running instance of a program that is being managed by the system's kernel. When you run a command, start an application, or execute a script, Linux creates a process in memory, allocates resources (like CPU time and RAM), and tracks it using a unique Process ID (PID)
+
+Types of Linux Processes:
+
+Processes generally fall into three operational categories:
+1) Foreground Processes: Interactive tasks that run in the terminal window and require your interaction (e.g., text editors like nano or a manual file search).
+2) Background Processes: Non-interactive tasks that run independent of the terminal screen, allowing you to type other commands while they finish.
+3) Daemons: Background services that start up during system boot and run continuously to handle specific system requests (e.g., sshd for remote connections or systemd for service management).
+
 The ps command displays information about running processes. Different options show different details.
 
 Basic PS Options
@@ -13,7 +22,7 @@ Basic PS Options
 
 Process States (S field)
     Code	Meaning
-    R	Running
+    R	Running/Runnable
     S	Sleeping (interruptible)
     D	Disk sleep (uninterruptible)
     Z	Zombie (terminated, waiting)
