@@ -19,7 +19,7 @@ Do it again
 # cat input.txt
 We are learning RHCSA
 ```
-We can see redirting input again overwritten the previous content. So to avoid this situation, always use `append` mode, means double >> redirection which will append the input under existing content.
+We can see redirecting input again overwritten the previous content. So to avoid this situation, always use `append` mode, means double >> redirection which will append the input under existing content.
 ```
 # echo "Welcome to Path4Cloud \n We are learning RHCSA" >> input.txt
 # cat input.txt
@@ -185,7 +185,7 @@ Lets redirect the error to null and get the clean output
 /proc/kcore
 
 Redirecting output with error
-# find /proc/ -size +10M &> find_ooutput.txt
+# find /proc/ -size +10M &> find_output.txt
 # cat find_ooutput.txt
 /proc/kcore
 find: ‘/proc/119081/task/119081/fd/6’: No such file or directory

@@ -26,7 +26,7 @@ Regular Permission:
     w: write
     x: execute
 
-    When we crate the file, it is in directory and top change inside the directory and to list the files or directory inside a parestn directory. We need these permissions:
+    When we create the file in directory and to change inside the directory or to list the files or directory inside a parent directory. We need these permissions:
     - to change inside a directory, we need x permission
     - to list the content, we need r permission
     - to write or delete something, we need w permission
@@ -106,7 +106,7 @@ Special Permission      Octal Value     Effect on Executable File           Effe
     
 ----> Note: If you see a capital letter (S or T), it means the underlying execution bit (x) is missing. A lowercase letter (s or t) means the executable bit is present and active.
 
-____________________________________________________________________________________________________________________________
+#################################################################################
 
 DEMO:
 
@@ -118,6 +118,8 @@ DEMO:
 
 ** Sticky Bit:
     You can try to create a file with normal user under /tmp directory and then try to delete with another normal user, operation will not be permitted since sticky bit is applied at /tmp directory, only root user can delete it.
+
+#################################################################################
 
 ## UMASK
 umask (User Mask) is a built-in shell command that acts as a permission filter for newly created files and directories. It strips away specified permissions automatically at the moment of creation to ensure your system remains secure.
