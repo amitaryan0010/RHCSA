@@ -1,0 +1,59 @@
+An ACL (Access Control List) in Linux is a feature that provides a flexible permission mechanism for file systems. It extends the traditional Linux file permissions (Owner, Group, and Others) by allowing you to assign specific permissions to individual users or groups for a single file or directory.
+
+Think of traditional permissions like a VIP list for a club that only allows the owner and one specific group in. An ACL is like a detailed guest list where you can name exactly who gets in, who can only look around, and who can edit the playlist.
+
+Why do we need ACLs? (The Limitation of Standard Permissions)
+    In standard Linux, if you want a file to be readable by UserA and writable by UserB, but they are not in the same primary group, it becomes very messy. You would have to create a new group, add both users, and change the file's group ownership.ACLs solve this by letting you run a single command to grant UserA or UserB exactly what they need without changing file ownership.
+
+Core Commands to Manage ACLs
+1) Checking Permissions (getfacl)
+    getfacl <file/dir>
+
+    [root@rhel-9 permission]# ll
+    drwxr-xr-x+ 2 root    root  17 Sep  3 05:05 acl_dir
+
+    (Note: Whenever a file has an ACL applied, a + symbol will appear at the end of its traditional permission string when you run ls -l, like -rw-r--r--+)
+
+    [root@rhel-9 permission]# getfacl acl_dir/
+    # file: acl_dir/
+    # owner: root
+    # group: root
+    user::rwx
+    user:dev1:rwx       <-- This is the ACL entry!
+    group::r-x
+    mask::rwx
+    other::r-x
+
+2) Setting Permissions (setfacl)
+    The basic syntax to modify (-m) permissions is: setfacl -m [u/g]:[name]:[permissions] [file]
+
+    Grant a user read/write: setfacl -m u:user:rw- file.txt
+    Grant a group read-only: setfacl -m g:group:r-- file.txt
+    Remove a specific ACL entry: setfacl -x u:user file.txt
+    Remove all ACLs from a file: setfacl -b file.txt
+
+3) Default ACLs (Inheritance)
+    If you want every new file or subfolder created inside a directory to automatically inherit the same ACLs, you use a Default ACL by adding the -d flag.
+
+    setfacl -d -m u:user:r-- /acl_dir
+
+PRO TIPS:
+    Understanding the "Mask": In Linux ACLs, the mask acts as a maximum permission ceiling for all named users and named groups.
+
+    Scenario 1: Fresh Directory (775) --> Set ACL (rwx)
+        - You create a directory with 775 permissions (drwxrwxr-x).
+        - You run setfacl -m u:user1:rwx.
+        - What the system does: The setfacl command looks at your request (rwx) and automatically recalculates the mask to match the highest permission given. The mask becomes rwx.
+        - The Result: The effective permission is full rwx.
+
+    Scenario 2: Fresh Directory (775) --> chmod 755 --> Set ACL (rwx)
+        - You create a directory with 775 permissions.
+        - You run chmod 755 on it. This explicitly locks the group/mask bits to r-x.
+        - You run setfacl -m u:user1:rwx.What the system does: Even though you asked for rwx, the explicit chmod step capped the maximum allowed ceiling at r-x. The mask stays restricted to r-x.
+        - The Result: The effective permission drops to r-x only. The write (w) permission is filtered out.
+
+    Scenario 3: Fresh Directory (755) --> Set ACL (rwx)
+        - You create a directory with 755 permissions (drwxr-xr-x).
+        - You run setfacl -m u:user1:rwx.
+        - The Mask Automatically Recalculates: Because you are not running chmod, you are not locking or freezing the mask. The setfacl command is allowed to automatically calculate a brand-new mask. The system looks at the highest permission being granted to any named user or group.
+        - The Final Result: When you run getfacl, you will rwx.
