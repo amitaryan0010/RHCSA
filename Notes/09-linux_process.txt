@@ -220,14 +220,28 @@ nice		Process priority (-20 to 19)
 pri			Current priority
 
 # top
+    Opens a live dashboard that refreshes every 3 seconds by default.
+    It will shows: uptime, current time, load average, tasks(running, sleeping, stopped, zombie), CPU and Memory, Swap and a list of live running process with its resource consumptions.
+    While top is running, we have few more common options to display specific information.
 # htop
-# watch -n 'ps aux'
+    The htop command is an advanced, interactive, and visually enhanced alternative to the traditional top command.
+# watch -n 2 'ps aux'
+    Display the 'ps aux' output here. in every 2 seconds, we can adjust the seconds according to the requirements.
 # free -h
+    (Memory Health-Check) It displays the total amount of free and used physical memory (RAM) and swap space in human-readable format (-h), like Gigabytes (G) or Megabytes (M).
 # df -h
+    (Disk Space Usage) It shows the amount of disk space used and available on all mounted filesystems, formatted to be human-readable (-h).
 # iostat -x 1 5
+    (Deep Disk Bottleneck Analysis) It displays extended statistics (-x) for your storage drives, taking 1-second samples, a total of 5 times.
 # vmstat 1 10
+    (Virtual Memory & System Health) It reports information about processes, memory, paging, block I/O, traps, and CPU activity every 1 second for 10 iterations.
 # sar -u (CPU usage)
+    Shows how CPU load is split between user applications (%user), system/kernel tasks (%system), and sitting idle (%idle).
 # sar -r (memory usage)
+    Displays historical memory metrics over time, including %memused and available buffers/caches.
 # sar -b (I/O and transfer rates)
+    Tracks total I/O operations per second (tps) and data read/written rates. 
 # sar -d (disk activity)
+    Drills down into individual drive metrics (like sda, sdb). If you have a server with multiple hard drives, this tells you exactly which specific disk is taking the brunt of the performance hit.
 # sar -W (swapping activity)
+    Monitors how many memory pages the system is swapping in (pswpin/s) and out (pswpout/s) per second. If these numbers are consistently high, it is a definitive sign that the machine desperately needs a physical RAM upgrade.
