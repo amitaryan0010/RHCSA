@@ -86,6 +86,7 @@ Giving Higher Priority
 ## REAL TIME MONITORING
 #### Signals
 `# kill -l`
+
 ![alt text](./lab_images/pro3.png)
 - SIGSTOP (19) and SIGCONT (18) — The Pause & Resume 
 ```
