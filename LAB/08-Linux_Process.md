@@ -30,6 +30,13 @@ systemd─┬─NetworkManager───2*[{NetworkManager}]
         ├─tuned───3*[{tuned}]
         ├─udisksd───4*[{udisksd}]
         └─upowerd───2*[{upowerd}]
+
+[root@rhel-9 ~]# pstree -u ansibleuser
+bash
+
+sshd-session───bash───sudo(root)───sudo───bash───pstree
+
+sshd-session───bash───sudo(root)───sudo───bash
 ```
 Systemd PID (Process ID) is 1
 ```
