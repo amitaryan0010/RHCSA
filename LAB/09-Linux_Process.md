@@ -86,7 +86,7 @@ Start two process with different nice values in background
 ```
 Giving Higher Priority
 # nice -n -10 dd if=/dev/zero of=/tmp/bigfile1 bs=1M count=10000 &
-(chnage the nice value to -10 here, then kernel will give the priroty to this process)
+(change the nice value to -10 here, then kernel will give the priroty to this process)
 ```
 ![alt text](./lab_images/pro2.png)
 
@@ -139,7 +139,7 @@ On Terminal 1: run jobs again, you will notice, the process is started again
   - It is a custom user-defined signal. The Linux kernel doesn't care what it does; it leaves it entirely up to the application developer to decide how the app reacts when it receives it.
   ```
   # Step 1: You started a massive copy in terminal 1 (PID 7889)
-  dd if=/dev/sda of=/dev/sdb bs=4M
+  dd if=/dev/sda of=/dev/null bs=4M
 
   # Step 2: Open terminal 2 and send SIGUSR1 to peek at its progress
   kill -10 <pid>>   # or: kill -SIGUSR1 <pid>
