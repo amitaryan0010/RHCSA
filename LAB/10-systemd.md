@@ -24,6 +24,7 @@ systemd(1)─┬─NetworkManager(849)─┬─{NetworkManager}(891)
 Service Management Commands
 
 - List all units: # systemctl list-units
+
 ![alt text](./lab_images/sys1.png)
 
 - List only a specific unit type: # systemctl list-units -t service
@@ -110,6 +111,7 @@ Sep 05 19:20:31 rhel-9 sshd-session[1798]: pam_unix(sshd:session): session opene
 Sep 05 19:25:11 rhel-9 sshd-session[5886]: Accepted publickey for ansibleuser from ::1 port 37122 ssh2: ED25519 SHA256:WgFIF3EKtzFDYyGXcT+1PHU4YtrEofNQNC7S2zfeSKU
 Sep 05 19:25:11 rhel-9 sshd-session[5886]: pam_unix(sshd:session): session opened for user ansibleuser(uid=1005) by ansibleuser(uid=0)
 ```
+
 ![alt text](./lab_images/sys2.png)
 
 ## Customizing Unit File
@@ -141,6 +143,7 @@ Sep 05 20:21:53 rhel-9 systemd[1]: Started The Apache HTTP Server.
 ```
 $ sudo systemctl edit httpd.service
 ```
+
 ![alt text](./lab_images/sys3.png)
 
 - Reload the daemon and notice the description is changed:
@@ -210,10 +213,13 @@ $ sudo systemctl status httpd
 ```
 
 - Simulate the CRASH if a LIST or ARRAY has more than one values:
+
 ![alt text](./lab_images/sys4.png)
 
 - Now, correct this by creating a another file with high-priority:
+
 ![alt text](./lab_images/sys5.png)
 
 - Verify with restart as well:
+
 ![alt text](./lab_images/sys6.png)
