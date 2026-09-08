@@ -1,0 +1,215 @@
+SYSTEMD:
+    Systemd:
+    is a system and service manager. The name is short for ‘system daemon’, an ongoing service that manages the system.
+    systemd is a comprehensive system and service manager for Linux operating systems. It acts as the very first process started by the Linux kernel during boot, running with Process ID (PID) 1, and remains active until the system shuts down. Its primary goal is to bootstrap user space and manage all background processes, replacing the older SysV init and Upstart systems with a fast, parallelized service startup architecture.
+
+    In systemd, every resource or process it manages is treated as an object called a Unit. Each unit is configured using a text file ending in a specific suffix that designates its "type". 
+
+Core systemd Unit Types
+    An important part of systemd are its unit files. These files define how components interact with each other, including the definition of a service or a mount point.
+    To monitor and manage services on a system using systemd, unit files are used. These text-based files define what to run or do, relevant conditions, and any applicable dependencies.
+    systemd categorizes its operations into different unit types based on the system resources they handle. The most common types include:
+    - .service (Service Units): Controls individual background applications or daemons (like an Apache web server or SSH). It details exactly how to start, restart, or stop the program.
+
+    - .target (Target Units): Used to group multiple units together to represent specific system states or boot levels (similar to legacy SysV runlevels, such as multi-user.target or graphical.target).
+
+    - .socket (Socket Units): Encapsulates IPC or network sockets. systemd listens on these sockets and dynamically fires up the matching .service only when traffic arrives, enabling on-demand service activation. 
+
+    - .timer (Timer Units): Schedules tasks to run based on specific dates, times, or monotonic delays. These act as a modern and powerful alternative to traditional cron jobs.
+
+    - .mount & .automount (Mounting Units): Handles file system mount points and automatic resource mounting upon access.
+
+    - .path (Path Units): Monitors physical files or directories for changes and triggers another service when a change occurs.
+
+    - .slice & .scope (Resource Management Units): Used by Linux Control Groups (cgroups) to partition, track, and restrict system resources (like CPU and memory) among collections of processes.
+
+Service Management Commands:
+    - To control systemd units, such as services, the systemctl command is used.
+    - Some functions include:
+        # Start and stop service or unit
+        # Show status of a unit
+        # Show dependencies
+
+Show all units
+    # systemctl list-units              <-- shows an overview of available units. It groups them by type (automount, device, scope, path, mount, service, timer, etc).
+    # systemctl list-unit-files         <-- includes the name and the state.
+
+Inspect single systemd unit
+    # systemctl status UNIT        <-- Shows the current state of service, running/failed
+    # systemctl cat UNIT           <-- Show the unit the file and defined settings
+    # systemctl show UNIT          <-- to audit the service and see where additional hardening can be applied.
+    # systemctl list-dependencies UNIT <-- To show the related dependencies
+
+Disable or enable systemd units
+    # systemctl enable --now UNIT
+    # systemctl disable --now UNIT
+
+Dealing with failed units
+    # systemctl --state=failed      <-- Units can get into a failed state due to settings, missing dependencies, external conditions, issues with permissions and so. The troubleshooting of failed systemd units may provide hints. After resolving an issue, try a restart or reset of the unit.
+
+    # systemctl reset-failed        <-- can reset all failed units. Optionally, the unit name can be specified to target only that unit.
+
+Timers
+    # systemctl list-timers         <-- Timers are the replacement of cronjobs. Use the list-timers command to show them.
+
+System state
+    - As systemd is a system and service manager, it can also respond to commands to stop or reboot the system.
+    # systemctl reboot
+    # systemctl poweroff
+    # systemctl suspend
+    # systemctl hibernate 
+
+Commonly used systemctl commands and options
+Command				Action
+--------------------------------------------------------------------------------------------------
+daemon-reload		Reload the manager after making changes to a systemd unit file
+disable UNIT		Disable the unit
+edit UNIT			Create an override for a unit
+edit --full UNIT	Edit the main unit file, usually better to create override
+enable UNIT			Enable the unit
+is-enabled UNIT		Check if the unit is enabled
+list-units			Show active units
+list-units --all	Show all units including the ones that are inactive
+list-unit-files		List unit files and their state
+mask UNIT			Fully disable the unit (manual start not possible)
+reload UNIT			Request unit to reload configuration (not always possible, depends on support)
+restart UNIT		Restart the unit
+start UNIT			Start the unit
+status UNIT			Show the status details of the unit
+stop UNIT			Stop the unit
+unmask UNIT			Reactivate unit so it can be started again
+
+Organization of a systemd service unit
+    - This unit has three sections: Unit, Service, and Install.
+            [root@rhel-9 ~]# systemctl cat sshd.service
+            # /usr/lib/systemd/system/sshd.service
+            [Unit]
+            Description=OpenSSH server daemon
+            Documentation=man:sshd(8) man:sshd_config(5)
+            After=network.target sshd-keygen.target
+            Wants=sshd-keygen.target
+
+            [Service]
+            Type=notify
+            EnvironmentFile=-/etc/sysconfig/sshd
+            ExecStart=/usr/sbin/sshd -D $OPTIONS
+            ExecReload=/bin/kill -HUP $MAINPID
+            KillMode=process
+            Restart=on-failure
+            RestartSec=42s
+
+            [Install]
+            WantedBy=multi-user.target
+
+Understanding the sections:
+[Unit]
+    First part is the [Unit], which defines the basics of the unit, including a description. It tells the unit if it has any dependencies. As there is no point running a ssh server if the sshd-keygen is not available yet, it is defining the sshd-keygen.target as its dependencies. It also tells the service manager that in what order to start up, in this case after the network is online, sshd-keygen are up and running.
+    What you can add (Requires=): If you want a strict dependency where sshd immediately aborts and fails if another unit is missing, you would use Requires=sshd-keygen.target
+[Service]
+    The most interesting section is the second one. Within the [Service] definition we define what we are going to do. Not just what we start, but also what we expect. Things like where we should store the process ID, if we have preparation steps before starting our main program, and even what to do in the event things go wrong. This section is also the place where we can do security tuning of our unit.
+[Install]
+    The latest section, [Install], defines at what stage this service should be started. In this case the common multi-user target, similar to what before was runlevel 3.
+
+Missing Section Types You Can Add:
+    - While standard services use those three blocks, systemd supports specialized alternative sections depending on the file type suffix:
+[Timer]: Used in .timer files. It completely drops the [Service] block and uses options like OnCalendar= or OnBootSec= to drive scheduling.
+    [Timer]
+    OnBootSec=15min
+    OnUnitActiveSec=1d
+
+[Mount] / [Automount]: Used in .mount units to define filesystem attachments directly inside systemd instead of using /etc/fstab.
+    [Mount]
+    What=/dev/disk/by-uuid/f7845953-1463-4627-a015-16725715f30b
+    Where=/boot
+    Type=xfs
+
+[Socket]: Used for socket activation (e.g., sshd.socket). It configures systemd to listen on port 22 on behalf of the service. The main sshd.service stays completely turned off until an actual connection packet arrives, saving system RAM.
+    [Socket]
+    ListenStream=22
+    Accept=yes
+
+
+Core Service Startup Types (Type=)
+    When writing or configuring a .service file, the [Service] section contains a crucial property called Type=. This instructs systemd on how to track the process lifecycle and determine when a service is officially "ready".
+
+Startup Type        How systemd Detects Readiness                           Best Used For
+--------------------------------------------------------------------------------------------------------------
+simple          Considers it ready the moment the process forks             Default foreground binaries.
+                from the main engine.
+exec            Considers it ready right after the process successfully     Modern foreground applications.
+                completes its initial execution call (execve).
+forking         Waits until the daemon spawns a child process and the       Traditional UNIX background daemons.
+                parent process exits.
+oneshot         Waits for the process to complete and exit entirely         Short-lived scripts or setup tasks.
+                before continuing.
+notify          Waits until the service explicitly sends a ready signal     Complex applications requiring custom readiness triggers.
+                back to systemd via a specialized library API.
+dbus            Waits until a predefined name appears on the system's       D-Bus integrated software components.
+                D-Bus messaging bus.
+------------------------------------------------------------------------------------------------------------------
+
+Reload vs Restart
+    - Not all services support reload: If an application doesn't have built-in code to re-read its configuration while running, systemctl reload will fail with an error.
+    - The Safe Alternative: If you are unsure whether a service supports a live reload, you can use reload-or-restart. This will gracefully reload the service if supported, but will automatically fall back to a full restart if reload isn't an option:
+        # sudo systemctl reload-or-restart <service>
+
+What about systemctl daemon-reload?
+    - Do not confuse reloading a service with systemctl daemon-reload.
+        - systemctl reload my_service tells the application to reload its config.
+        - systemctl daemon-reload tells systemd itself to scan for changes made to .service unit files on your disk.
+
+What about systemctl reload-or-restart?
+    This command is a smart fallback command designed to update a service with the absolute minimum amount of downtime possible.
+        # sudo systemctl reload-or-restart <service_name>
+    How It Works
+    - First Choice (Reload): It checks if the service configuration file includes an ExecReload= instruction. If it does, systemctl triggers a live reload, updating the app's settings without breaking active user connections.
+    - Second Choice (Restart): If the service does not support a live reload, systemctl automatically falls back to a full restart (stopping the process and starting it back up) to ensure your changes take effect.
+
+Customizing existing Unit file:
+    You should never modify the file in /usr/lib/ directly. Instead, you will create a drop-in configuration file inside a matching .d folder. systemd provides a built-in command that creates this folder structure and the file for you automatically.
+
+    The Recommended Way (Using systemctl edit): Run the following command. This safely creates the .d directory and opens a text editor:
+        # sudo systemctl edit <unit>
+
+    The Manual Way (Alternative): If you are writing an Ansible playbook or a script and cannot use the interactive systemctl edit command, you can create the directory and file manually:
+        Create the .d directory matching the service name:
+            # sudo mkdir -p /etc/systemd/system/<unit>.<type>.d
+
+        Create a custom configuration file (it must end in .conf):
+            # sudo vim /etc/systemd/system/<unit>.<type>.d/override.conf
+
+        Paste your custom description into the file.
+        Save the file and force systemd to read the change:
+            # sudo systemctl daemon-reload
+
+    systemd processes files inside the .d drop-in directories using a strict lexicographical (alphabetical and numerical) sorting order.If multiple .conf files exist inside the same .d directory, they are loaded one after another. If those files contain conflicting settings, the file that is sorted and read last wins and overrides everything before it.
+
+    The Sorting Rules
+        systemd looks at the file names and evaluates them character-by-character based on their ASCII values:
+            - Numbers take priority over letters: A file starting with 10- is read before a file starting with 20- or abc-.
+            - Standard Alphabetical Order: a.conf is read before b.conf.
+            - Lowercase vs Uppercase: Uppercase letters generally sort before lowercase letters depending on the locale, but numbers are always safest for ordering.
+
+        A Visual Sorting Chain
+            01-first.conf        # 1st (Lowest number)
+            10-config.conf       # 2nd
+            99-last-num.conf     # 3rd (Highest number)
+            A-override.conf      # 4th (Uppercase)
+            Z-override.conf      # 5th
+            a-custom.conf        # 6th (Lowercase)
+            override.conf        # 7th
+            z-custom.conf        # 8th (Last processed -> Wins any conflicts!)
+
+        Best Practice: 
+            The 10-, 20-, 30- ConventionBecause numbers are read first and are incredibly easy to order visually, the Linux community universally standardizes on using two-digit numeric prefixes for drop-in configuration files.
+
+        A Critical Rule for Overriding Fields
+            How a configuration behaves when overridden depends entirely on the type of setting:
+                Single-Value Fields (e.g., Description=, TasksMax=): The last file read completely replaces the value. You don't need to do anything special.
+                
+                List/Array Fields (e.g., ExecStart=, Environment=): systemd appends new values to the list instead of replacing them. If you want to change ExecStart in a drop-in file, you must clear the list first by passing an empty line, like this:
+
+                    [Service]
+                    ExecStart=                     # <-- This resets and clears the original command line
+                    ExecStart=/usr/sbin/sshd -D -e # <-- This assigns your new custom command line
+                ** If you omit that blank ExecStart=, the service will try to run both commands simultaneously and crash with an error.
