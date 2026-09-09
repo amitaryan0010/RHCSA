@@ -1,0 +1,52 @@
+SSH (Secure Shell) is a cryptographic network protocol used to securely connect to and manage a remote Linux server over an unsecured network. It encrypts all traffic (including login credentials and commands) to prevent eavesdropping
+
+Basic SSH Commands
+    # ssh username@remote_host_or_ip
+
+Common Flags and Options
+    Option      Purpose                                     Example
+    -p [port]   Connect to a non-standard/custom port       ssh -p 2222 user@192.168.1.50
+    -i [file]   Specify a path to a private SSH key file    ssh -i ~/.ssh/id_rsa user@192.168.1.50
+    -v          Enable verbose mode                         ssh -v user@192.168.1.50
+                (useful for debugging connection errors)
+
+Setting Up the SSH Server
+    # dnf install openssh-server
+
+Managing the SSH Service
+    # systemctl start sshd    --> Start the service immediately
+    # systemctl enable sshd   --> Configure the service to launch at boot
+    # systemctl status sshd   --> Check if it is actively running
+
+Passwordless Authentication (SSH Keys)
+    Using cryptographic key pairs is much more secure than standard passwords. It prevents brute-force login attempts.
+    It is an assymetric cryptography where data will be encrypted using public key and then sent, and decrypt data with private key.
+    We need to create the keys and then install the public key to target host to connect it with key-based which is password less authentication.
+        # ssh-keygen -t ed25519
+        OR
+        # ssh-keygen -t rsa
+    Copy the public key to your remote server:
+        # ssh-copy-id username@remote_host_or_ip
+
+    --> It will install the public key to ~/.ssh/authorized_keys
+
+Hardening SSH Security
+    Let say, we have multiple keys to connect with different-different servers, then we can copy the respective keys to target node. But while connecting, everytime we need to specify the key file path else, it will take the default key file and if that doesn't matches then it will prompt for passwrd. To fix this issue, we can create a config file and make an entry for dedicated key file path for respective hosts  at local server.
+        # ~/.ssh/config
+    
+    To secure your remote server, you should modify the SSH daemon configuration file located at /etc/ssh/sshd_config
+    Apply these best-practice updates inside the file: 
+        Disable Root Login: Change PermitRootLogin yes to PermitRootLogin no
+        Disable Password Authentication: (Only do this after verifying your SSH keys work!) Change PasswordAuthentication yes to PasswordAuthentication no
+        Change Default Port: Change Port 22 to a custom value (e.g., Port 2244) to avoid automated bot scans
+
+    But always, put your custom configuration under /etc/ssh/sshd_config.d/90-custom.conf
+
+Troubleshooting Common Errors
+    Connection refused: The remote server is either offline, the firewall is blocking port 22, or the sshd service isn't running on the target machine.
+    
+    Permission denied (publickey): The server is rejecting your password or your public key hasn't been added to the server's ~/.ssh/authorized_keys file.
+    
+    Host key verification failed: The remote server's cryptographic identity has changed. Fix this locally by clearing the outdated cache entry:
+
+    Connection timed out: The Server is unreachable or firewall is blocking the port.
